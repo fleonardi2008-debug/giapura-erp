@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,27 +37,36 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Giapura</CardTitle>
-          <CardDescription>Ingresá con tu cuenta para continuar.</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-10 text-center">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">giapura</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Costos y stock</p>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+          <h2 className="mb-1 text-lg font-medium text-foreground">Ingresar</h2>
+          <p className="mb-6 text-sm text-muted-foreground">Entrá con tu email y contraseña.</p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div>
+              <Label htmlFor="email" className="mb-1.5 block text-sm font-medium text-foreground">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
                 required
+                placeholder="tu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
+            <div>
+              <Label htmlFor="password" className="mb-1.5 block text-sm font-medium text-foreground">
+                Contraseña
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -73,8 +81,12 @@ export default function LoginPage() {
               {loading ? "Ingresando..." : "Ingresar"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+
+        <p className="mt-6 text-center text-xs text-muted-foreground/70">
+          Uso interno del equipo Giapura
+        </p>
+      </div>
     </div>
   );
 }

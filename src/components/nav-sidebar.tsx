@@ -18,10 +18,12 @@ export function NavSidebar({ userName, role }: { userName: string; role: string 
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-56 flex-col border-r bg-muted/20">
-      <div className="border-b px-4 py-4">
-        <p className="text-sm font-semibold">Giapura</p>
-        <p className="text-xs text-muted-foreground">{userName} · {role}</p>
+    <aside className="flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar">
+      <div className="border-b border-sidebar-border px-4 py-4">
+        <p className="text-lg font-semibold tracking-tight text-sidebar-foreground">giapura</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {userName} · {role}
+        </p>
       </div>
       <nav className="flex-1 space-y-1 p-2">
         {links.map((link) => (
@@ -29,15 +31,16 @@ export function NavSidebar({ userName, role }: { userName: string; role: string 
             key={link.href}
             href={link.href}
             className={cn(
-              "block rounded-md px-3 py-2 text-sm hover:bg-muted",
-              pathname === link.href && "bg-muted font-medium"
+              "block rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              pathname === link.href &&
+                "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-sm"
             )}
           >
             {link.label}
           </Link>
         ))}
       </nav>
-      <div className="border-t p-2">
+      <div className="border-t border-sidebar-border p-2">
         <Button
           variant="ghost"
           className="w-full justify-start"
