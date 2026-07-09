@@ -51,14 +51,20 @@ export async function marcarLoteRecibido(loteId: string) {
   if (!lote) return { error: "Lote no encontrado" };
   if (lote.estado === "RECIBIDO") return { error: "Este lote ya fue recibido" };
 
-  const costo = await calcularCostoUnitario(lote.skuId, lote.fecha);
+  // lote.fecha solo tiene el día (medianoche UTC); una receta o costo cargado
+  // más tarde ese mismo día debe contar como vigente, por eso se evalúa al
+  // final del día en vez de al principio.
+  const fechaEfectiva = new Date(lote.fecha);
+  fechaEfectiva.setUTCHours(23, 59, 59, 999);
+
+  const costo = await calcularCostoUnitario(lote.skuId, fechaEfectiva);
   if (costo.faltantes.length > 0) {
     return {
       error: `No se puede recibir: ${costo.faltantes.join(" ")}`,
     };
   }
 
-  const receta = await getRecetaVigente(lote.skuId, lote.fecha);
+  const receta = await getRecetaVigente(lote.skuId, fechaEfectiva);
 
   await prisma.$transaction(async (tx) => {
     const costoTotal = costo.costoTotal.times(lote.cantidadUnidades);

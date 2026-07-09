@@ -74,7 +74,7 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
         <CardContent>
           <RecetaEditor
             skuId={sku.id}
-            insumos={insumos}
+            insumos={insumos.map((i) => ({ id: i.id, nombre: i.nombre, unidadMedida: i.unidadMedida }))}
             initialItems={
               costo.receta?.items.map((item) => ({
                 insumoId: item.insumoId,
