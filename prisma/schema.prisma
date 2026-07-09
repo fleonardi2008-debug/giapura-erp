@@ -1,0 +1,378 @@
+// Prisma schema - Mini-ERP Giapura
+// Ver plan: costos -> stock -> ventas (Tienda Nube) -> estado de resultados -> envios
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  OPERADOR
+}
+
+enum TipoInsumo {
+  INGREDIENTE
+  PACKAGING
+  OTRO
+}
+
+enum TipoItemStock {
+  INSUMO
+  PRODUCTO_TERMINADO
+}
+
+enum TipoMovimientoStock {
+  COMPRA
+  PRODUCCION_INGRESO
+  PRODUCCION_CONSUMO
+  VENTA
+  AJUSTE
+  DEVOLUCION
+}
+
+enum EstadoLote {
+  PLANIFICADO
+  EN_FABRICA
+  RECIBIDO
+}
+
+enum EstadoPedido {
+  ABIERTO
+  CERRADO
+  CANCELADO
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PAGADO
+  PARCIAL
+  REEMBOLSADO
+}
+
+enum EstadoEnvio {
+  PENDIENTE
+  DESPACHADO
+  EN_TRANSITO
+  ENTREGADO
+  PROBLEMA
+}
+
+enum CategoriaGasto {
+  COMISION_TIENDANUBE
+  COMISION_MERCADOPAGO
+  ENVIO
+  MARKETING
+  FIJO
+  OTRO
+}
+
+enum TipoComision {
+  TIENDANUBE
+  MERCADOPAGO
+}
+
+enum EstadoPeriodo {
+  ABIERTO
+  CERRADO
+}
+
+// ---------- Usuarios / auditoria ----------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  nombre       String
+  role         Role     @default(OPERADOR)
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  auditLogs         AuditLog[]
+  gastosCreados     Gasto[]           @relation("GastoCreatedBy")
+  movimientosCreados MovimientoStock[] @relation("MovStockCreatedBy")
+  enviosActualizados Envio[]          @relation("EnvioActualizadoPor")
+  periodosCerrados  PeriodoContable[] @relation("PeriodoCerradoPor")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  accion    String
+  entidad   String
+  entidadId String
+  detalle   Json?
+  createdAt DateTime @default(now())
+
+  @@index([entidad, entidadId])
+}
+
+// ---------- Costos ----------
+
+model Sku {
+  id                  String   @id @default(cuid())
+  codigo              String   @unique
+  nombre              String
+  tiendaNubeProductId String?
+  tiendaNubeVariantId String?
+  unidadMedida        String   @default("unidad")
+  activo              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  recetas          Receta[]
+  costosFabrica    CostoFabricaHistorico[]
+  lotes            LoteProduccion[]
+  movimientosStock MovimientoStock[]
+  stockActual      StockActual?
+  pedidoItems      PedidoItem[]
+}
+
+model Insumo {
+  id           String     @id @default(cuid())
+  nombre       String
+  tipo         TipoInsumo
+  unidadMedida String
+  stockMinimo  Decimal    @default(0) @db.Decimal(12, 3)
+  activo       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  costos           InsumoCosto[]
+  recetaItems      RecetaItem[]
+  movimientosStock MovimientoStock[]
+  stockActual      StockActual?
+}
+
+model InsumoCosto {
+  id            String    @id @default(cuid())
+  insumoId      String
+  insumo        Insumo    @relation(fields: [insumoId], references: [id])
+  costoUnitario Decimal   @db.Decimal(14, 4)
+  vigenteDesde  DateTime
+  vigenteHasta  DateTime?
+  nota          String?
+  createdAt     DateTime  @default(now())
+
+  @@index([insumoId, vigenteDesde])
+}
+
+model Receta {
+  id           String    @id @default(cuid())
+  skuId        String
+  sku          Sku       @relation(fields: [skuId], references: [id])
+  version      Int
+  vigenteDesde DateTime
+  vigenteHasta DateTime?
+  nota         String?
+  createdAt    DateTime  @default(now())
+
+  items RecetaItem[]
+
+  @@unique([skuId, version])
+  @@index([skuId, vigenteDesde])
+}
+
+model RecetaItem {
+  id                String  @id @default(cuid())
+  recetaId          String
+  receta            Receta  @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+  insumoId          String
+  insumo            Insumo  @relation(fields: [insumoId], references: [id])
+  cantidadPorUnidad Decimal @db.Decimal(12, 4)
+  unidadMedida      String
+}
+
+model CostoFabricaHistorico {
+  id             String    @id @default(cuid())
+  skuId          String
+  sku            Sku       @relation(fields: [skuId], references: [id])
+  costoPorUnidad Decimal   @db.Decimal(14, 4)
+  vigenteDesde   DateTime
+  vigenteHasta   DateTime?
+  nota           String?
+  createdAt      DateTime  @default(now())
+
+  @@index([skuId, vigenteDesde])
+}
+
+// ---------- Produccion / stock ----------
+
+model LoteProduccion {
+  id                    String     @id @default(cuid())
+  skuId                 String
+  sku                   Sku        @relation(fields: [skuId], references: [id])
+  fecha                 DateTime
+  cantidadUnidades      Decimal    @db.Decimal(12, 3)
+  numeroLote            String     @unique
+  costoUnitarioSnapshot Decimal?   @db.Decimal(14, 4)
+  costoTotalSnapshot    Decimal?   @db.Decimal(14, 2)
+  estado                EstadoLote @default(PLANIFICADO)
+  nota                  String?
+  createdAt             DateTime   @default(now())
+  recibidoAt            DateTime?
+
+  movimientos MovimientoStock[]
+}
+
+model MovimientoStock {
+  id                    String              @id @default(cuid())
+  tipoItem              TipoItemStock
+  insumoId              String?
+  insumo                Insumo?             @relation(fields: [insumoId], references: [id])
+  skuId                 String?
+  sku                   Sku?                @relation(fields: [skuId], references: [id])
+  tipoMovimiento        TipoMovimientoStock
+  cantidad              Decimal             @db.Decimal(12, 3)
+  costoUnitarioSnapshot Decimal?            @db.Decimal(14, 4)
+  loteProduccionId      String?
+  loteProduccion        LoteProduccion?     @relation(fields: [loteProduccionId], references: [id])
+  pedidoId              String?
+  pedido                Pedido?             @relation(fields: [pedidoId], references: [id])
+  fecha                 DateTime            @default(now())
+  nota                  String?
+  createdById           String?
+  createdBy             User?               @relation("MovStockCreatedBy", fields: [createdById], references: [id])
+  createdAt             DateTime            @default(now())
+
+  @@index([insumoId])
+  @@index([skuId])
+  @@index([tipoMovimiento, fecha])
+}
+
+model StockActual {
+  id                     String        @id @default(cuid())
+  itemTipo               TipoItemStock
+  insumoId               String?       @unique
+  insumo                 Insumo?       @relation(fields: [insumoId], references: [id])
+  skuId                  String?       @unique
+  sku                    Sku?          @relation(fields: [skuId], references: [id])
+  cantidadActual         Decimal       @default(0) @db.Decimal(12, 3)
+  costoPromedioPonderado Decimal?      @db.Decimal(14, 4)
+  actualizadoEn          DateTime      @updatedAt
+}
+
+// ---------- Ventas / gastos / envios ----------
+
+model Pedido {
+  id                       String       @id @default(cuid())
+  tiendaNubeOrderId        String?      @unique
+  numeroPedido             String
+  fecha                    DateTime
+  clienteNombre            String?
+  clienteEmail             String?
+  estadoPedido             EstadoPedido @default(ABIERTO)
+  estadoPago               EstadoPago   @default(PENDIENTE)
+  estadoEnvio              EstadoEnvio  @default(PENDIENTE)
+  subtotal                 Decimal      @db.Decimal(14, 2)
+  costoEnvioCobradoCliente Decimal      @default(0) @db.Decimal(14, 2)
+  total                    Decimal      @db.Decimal(14, 2)
+  rawPayload               Json?
+  sincronizadoEn           DateTime?
+  createdAt                DateTime     @default(now())
+
+  items            PedidoItem[]
+  movimientosStock MovimientoStock[]
+  gastos           Gasto[]
+  envio            Envio?
+
+  @@index([fecha])
+  @@index([estadoPago])
+}
+
+model PedidoItem {
+  id             String  @id @default(cuid())
+  pedidoId       String
+  pedido         Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  skuId          String?
+  sku            Sku?    @relation(fields: [skuId], references: [id])
+  cantidad       Decimal @db.Decimal(12, 3)
+  precioUnitario Decimal @db.Decimal(14, 2)
+  subtotal       Decimal @db.Decimal(14, 2)
+}
+
+model Gasto {
+  id          String           @id @default(cuid())
+  categoria   CategoriaGasto
+  descripcion String
+  monto       Decimal          @db.Decimal(14, 2)
+  fecha       DateTime
+  pedidoId    String?
+  pedido      Pedido?          @relation(fields: [pedidoId], references: [id])
+  periodoId   String?
+  periodo     PeriodoContable? @relation(fields: [periodoId], references: [id])
+  recurrente  Boolean          @default(false)
+  createdById String?
+  createdBy   User?            @relation("GastoCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime         @default(now())
+
+  @@index([fecha])
+  @@index([categoria])
+}
+
+model ComisionConfig {
+  id           String       @id @default(cuid())
+  tipo         TipoComision
+  porcentaje   Decimal?     @db.Decimal(6, 4)
+  montoFijo    Decimal?     @db.Decimal(14, 2)
+  vigenteDesde DateTime
+  vigenteHasta DateTime?
+
+  @@index([tipo, vigenteDesde])
+}
+
+model Envio {
+  id                   String      @id @default(cuid())
+  pedidoId             String      @unique
+  pedido               Pedido      @relation(fields: [pedidoId], references: [id])
+  transportista        String?
+  numeroSeguimiento    String?
+  estado               EstadoEnvio @default(PENDIENTE)
+  fechaDespacho        DateTime?
+  fechaEntregaEstimada DateTime?
+  fechaEntregaReal     DateTime?
+  actualizadoPorId     String?
+  actualizadoPor       User?       @relation("EnvioActualizadoPor", fields: [actualizadoPorId], references: [id])
+  nota                 String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+}
+
+model PeriodoContable {
+  id           String        @id @default(cuid())
+  anio         Int
+  mes          Int
+  estado       EstadoPeriodo @default(ABIERTO)
+  cerradoEn    DateTime?
+  cerradoPorId String?
+  cerradoPor   User?         @relation("PeriodoCerradoPor", fields: [cerradoPorId], references: [id])
+  gastos       Gasto[]
+
+  @@unique([anio, mes])
+}
+
+// ---------- Integracion Tienda Nube ----------
+
+model TiendaNubeConexion {
+  id             String   @id @default(cuid())
+  storeId        String   @unique
+  accessTokenEnc String
+  scope          String?
+  conectadoEn    DateTime @default(now())
+  activo         Boolean  @default(true)
+}
+
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  evento     String
+  storeId    String
+  payload    Json
+  recibidoEn DateTime @default(now())
+  procesado  Boolean  @default(false)
+  error      String?
+
+  @@index([procesado])
+}
