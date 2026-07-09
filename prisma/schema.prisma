@@ -124,6 +124,13 @@ model Sku {
   activo              Boolean  @default(true)
   createdAt           DateTime @default(now())
 
+  // Economía unitaria: precio de venta, merma y prorrateo de gastos fijos
+  // para calcular contribución marginal y punto de equilibrio.
+  precioVenta               Decimal? @db.Decimal(14, 2)
+  perdidaPct                Decimal  @default(0) @db.Decimal(5, 2)
+  gastosGeneralesMensuales  Decimal? @db.Decimal(14, 2)
+  produccionMensualEstimada Int?
+
   recetas          Receta[]
   costosFabrica    CostoFabricaHistorico[]
   lotes            LoteProduccion[]

@@ -38,29 +38,45 @@ export async function getRecetaVigente(skuId: string, fecha: Date = new Date()) 
 export type CostoUnitarioBreakdown = {
   skuId: string;
   fecha: Date;
+  costoInsumosBase: Prisma.Decimal;
+  perdidaPct: Prisma.Decimal;
   costoInsumos: Prisma.Decimal;
   costoFabrica: Prisma.Decimal;
+  /** Costo variable/marginal: insumos (con merma) + costo de fábrica. */
   costoTotal: Prisma.Decimal;
+  precioVenta: Prisma.Decimal | null;
+  gastosGeneralesMensuales: Prisma.Decimal | null;
+  produccionMensualEstimada: number | null;
+  /** Gastos fijos mensuales prorrateados por unidad estimada. */
+  gastoGeneralPorUnidad: Prisma.Decimal;
+  /** Costo unitario completo: costo variable + gastos generales por unidad. */
+  costoUnitarioCompleto: Prisma.Decimal;
+  margenUnitario: Prisma.Decimal | null;
+  contribucionMarginal: Prisma.Decimal | null;
+  puntoEquilibrioUnidades: Prisma.Decimal | null;
   receta: Awaited<ReturnType<typeof getRecetaVigente>>;
   faltantes: string[];
 };
 
 /**
  * Costo unitario de un SKU a una fecha dada: suma de (cantidad de cada insumo de la
- * receta vigente x costo vigente de ese insumo) + costo de fábrica vigente.
- * Este valor se snapshotea en cada lote de producción, no se recalcula retroactivamente.
+ * receta vigente x costo vigente de ese insumo, ajustado por % de merma) + costo de
+ * fábrica vigente, más el prorrateo de gastos generales fijos por unidad.
+ * El costo variable (costoTotal) se snapshotea en cada lote de producción, no se
+ * recalcula retroactivamente.
  */
 export async function calcularCostoUnitario(
   skuId: string,
   fecha: Date = new Date()
 ): Promise<CostoUnitarioBreakdown> {
-  const [receta, costoFabrica] = await Promise.all([
+  const [sku, receta, costoFabrica] = await Promise.all([
+    prisma.sku.findUnique({ where: { id: skuId } }),
     getRecetaVigente(skuId, fecha),
     getCostoFabricaVigente(skuId, fecha),
   ]);
 
   const faltantes: string[] = [];
-  let costoInsumos = new Prisma.Decimal(0);
+  let costoInsumosBase = new Prisma.Decimal(0);
 
   if (!receta) {
     faltantes.push("No hay receta vigente para este SKU.");
@@ -71,7 +87,9 @@ export async function calcularCostoUnitario(
         faltantes.push(`Falta costo vigente de "${item.insumo.nombre}".`);
         continue;
       }
-      costoInsumos = costoInsumos.plus(costoInsumo.costoUnitario.times(item.cantidadPorUnidad));
+      costoInsumosBase = costoInsumosBase.plus(
+        costoInsumo.costoUnitario.times(item.cantidadPorUnidad)
+      );
     }
   }
 
@@ -79,15 +97,45 @@ export async function calcularCostoUnitario(
     faltantes.push("No hay costo de fábrica vigente para este SKU.");
   }
 
+  const perdidaPct = sku?.perdidaPct ?? new Prisma.Decimal(0);
+  const costoInsumos = costoInsumosBase.times(perdidaPct.dividedBy(100).plus(1));
   const costoFabricaValor = costoFabrica?.costoPorUnidad ?? new Prisma.Decimal(0);
   const costoTotal = costoInsumos.plus(costoFabricaValor);
+
+  const precioVenta = sku?.precioVenta ?? null;
+  const gastosGeneralesMensuales = sku?.gastosGeneralesMensuales ?? null;
+  const produccionMensualEstimada = sku?.produccionMensualEstimada ?? null;
+
+  const gastoGeneralPorUnidad =
+    gastosGeneralesMensuales && produccionMensualEstimada
+      ? gastosGeneralesMensuales.dividedBy(produccionMensualEstimada)
+      : new Prisma.Decimal(0);
+
+  const costoUnitarioCompleto = costoTotal.plus(gastoGeneralPorUnidad);
+
+  const margenUnitario = precioVenta ? precioVenta.minus(costoUnitarioCompleto) : null;
+  const contribucionMarginal = precioVenta ? precioVenta.minus(costoTotal) : null;
+  const puntoEquilibrioUnidades =
+    gastosGeneralesMensuales && contribucionMarginal && contribucionMarginal.greaterThan(0)
+      ? gastosGeneralesMensuales.dividedBy(contribucionMarginal)
+      : null;
 
   return {
     skuId,
     fecha,
+    costoInsumosBase,
+    perdidaPct,
     costoInsumos,
     costoFabrica: costoFabricaValor,
     costoTotal,
+    precioVenta,
+    gastosGeneralesMensuales,
+    produccionMensualEstimada,
+    gastoGeneralPorUnidad,
+    costoUnitarioCompleto,
+    margenUnitario,
+    contribucionMarginal,
+    puntoEquilibrioUnidades,
     receta,
     faltantes,
   };

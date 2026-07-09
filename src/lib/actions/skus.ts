@@ -106,6 +106,40 @@ export async function createReceta(skuId: string, formData: FormData) {
   return { success: true };
 }
 
+const economiaSchema = z.object({
+  skuId: z.string().min(1),
+  precioVenta: z.coerce.number().positive().optional(),
+  perdidaPct: z.coerce.number().min(0).max(100).default(0),
+  gastosGeneralesMensuales: z.coerce.number().min(0).optional(),
+  produccionMensualEstimada: z.coerce.number().int().positive().optional(),
+});
+
+export async function updateSkuEconomia(formData: FormData) {
+  const session = await getSession();
+  if (!session) throw new Error("No autenticado");
+
+  const parsed = economiaSchema.safeParse({
+    skuId: formData.get("skuId"),
+    precioVenta: formData.get("precioVenta") || undefined,
+    perdidaPct: formData.get("perdidaPct") || 0,
+    gastosGeneralesMensuales: formData.get("gastosGeneralesMensuales") || undefined,
+    produccionMensualEstimada: formData.get("produccionMensualEstimada") || undefined,
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  const { skuId, ...data } = parsed.data;
+
+  await prisma.sku.update({ where: { id: skuId }, data });
+
+  revalidatePath(`/skus/${skuId}`);
+  revalidatePath("/skus");
+  revalidatePath("/");
+  return { success: true };
+}
+
 const costoFabricaSchema = z.object({
   skuId: z.string().min(1),
   costoPorUnidad: z.coerce.number().positive("Debe ser mayor a 0"),

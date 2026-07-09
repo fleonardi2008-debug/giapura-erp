@@ -3,7 +3,12 @@ import { prisma } from "@/lib/db";
 import { calcularCostoUnitario, getCostoFabricaVigente } from "@/lib/costing";
 import { RecetaEditor } from "@/components/skus/receta-editor";
 import { ActualizarCostoFabricaDialog } from "@/components/skus/actualizar-costo-fabrica-dialog";
+import { EditarEconomiaDialog } from "@/components/skus/editar-economia-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+function fmt(n: { toFixed: (d: number) => string } | null) {
+  return n ? `$${n.toFixed(2)}` : "—";
+}
 
 export default async function SkuDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,15 +24,24 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{sku.nombre}</h1>
-        <p className="text-muted-foreground">Código {sku.codigo}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">{sku.nombre}</h1>
+          <p className="text-muted-foreground">Código {sku.codigo}</p>
+        </div>
+        <EditarEconomiaDialog
+          skuId={sku.id}
+          precioVenta={sku.precioVenta?.toString() ?? null}
+          perdidaPct={sku.perdidaPct.toString()}
+          gastosGeneralesMensuales={sku.gastosGeneralesMensuales?.toString() ?? null}
+          produccionMensualEstimada={sku.produccionMensualEstimada}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-normal text-muted-foreground">Costo insumos</CardTitle>
+            <CardTitle className="text-sm font-normal text-muted-foreground">Costo insumos (con merma)</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">${costo.costoInsumos.toFixed(2)}</CardContent>
         </Card>
@@ -39,7 +53,7 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-normal text-muted-foreground">Costo unitario total</CardTitle>
+            <CardTitle className="text-sm font-normal text-muted-foreground">Costo variable (marginal)</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">${costo.costoTotal.toFixed(2)}</CardContent>
         </Card>
@@ -52,6 +66,50 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
           ))}
         </div>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Economía unitaria</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Precio de venta</p>
+              <p className="text-xl font-semibold">{fmt(costo.precioVenta)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Gastos generales / unidad</p>
+              <p className="text-xl font-semibold">${costo.gastoGeneralPorUnidad.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Costo unitario completo</p>
+              <p className="text-xl font-semibold">${costo.costoUnitarioCompleto.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Margen unitario</p>
+              <p className="text-xl font-semibold">{fmt(costo.margenUnitario)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Contribución marginal</p>
+              <p className="text-xl font-semibold">{fmt(costo.contribucionMarginal)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Punto de equilibrio</p>
+              <p className="text-xl font-semibold">
+                {costo.puntoEquilibrioUnidades
+                  ? `${costo.puntoEquilibrioUnidades.toFixed(0)} unidades/mes`
+                  : "—"}
+              </p>
+            </div>
+          </div>
+          {!costo.precioVenta && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Cargá un precio de venta en &quot;Editar economía&quot; para ver margen, contribución
+              marginal y punto de equilibrio.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

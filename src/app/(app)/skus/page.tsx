@@ -23,9 +23,9 @@ export default async function SkusPage() {
           <TableRow>
             <TableHead>Código</TableHead>
             <TableHead>Nombre</TableHead>
-            <TableHead>Costo insumos</TableHead>
-            <TableHead>Costo fábrica</TableHead>
-            <TableHead>Costo unitario total</TableHead>
+            <TableHead>Costo variable</TableHead>
+            <TableHead>Precio</TableHead>
+            <TableHead>Margen</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -36,13 +36,15 @@ export default async function SkusPage() {
               <TableRow key={sku.id}>
                 <TableCell className="font-medium">{sku.codigo}</TableCell>
                 <TableCell>{sku.nombre}</TableCell>
-                <TableCell>${costo.costoInsumos.toFixed(2)}</TableCell>
-                <TableCell>${costo.costoFabrica.toFixed(2)}</TableCell>
-                <TableCell className="font-semibold">
+                <TableCell>
                   ${costo.costoTotal.toFixed(2)}
                   {costo.faltantes.length > 0 && (
                     <span className="ml-2 text-xs font-normal text-destructive">incompleto</span>
                   )}
+                </TableCell>
+                <TableCell>{costo.precioVenta ? `$${costo.precioVenta.toFixed(2)}` : "—"}</TableCell>
+                <TableCell className="font-semibold">
+                  {costo.margenUnitario ? `$${costo.margenUnitario.toFixed(2)}` : "—"}
                 </TableCell>
                 <TableCell className="text-right">
                   <Link href={`/skus/${sku.id}`} className="text-sm underline">
