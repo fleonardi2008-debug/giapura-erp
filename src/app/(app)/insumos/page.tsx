@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { NuevoInsumoDialog } from "@/components/insumos/nuevo-insumo-dialog";
 import { ActualizarCostoDialog } from "@/components/insumos/actualizar-costo-dialog";
+import { RegistrarCompraDialog } from "@/components/insumos/registrar-compra-dialog";
 import { DesactivarInsumoButton } from "@/components/insumos/desactivar-insumo-button";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -72,6 +73,11 @@ export default async function InsumosPage() {
                   )}
                 </TableCell>
                 <TableCell className="text-right space-x-2">
+                  <RegistrarCompraDialog
+                    insumoId={insumo.id}
+                    insumoNombre={insumo.nombre}
+                    unidadMedida={insumo.unidadMedida}
+                  />
                   <ActualizarCostoDialog insumoId={insumo.id} insumoNombre={insumo.nombre} />
                   <DesactivarInsumoButton insumoId={insumo.id} />
                 </TableCell>

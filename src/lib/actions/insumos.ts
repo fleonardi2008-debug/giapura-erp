@@ -95,6 +95,67 @@ export async function addInsumoCosto(formData: FormData) {
   return { success: true };
 }
 
+const registrarCompraSchema = z.object({
+  insumoId: z.string().min(1),
+  cantidad: z.coerce.number().positive("Debe ser mayor a 0"),
+  fecha: z.coerce.date(),
+  costoUnitario: z.coerce.number().positive().optional(),
+  nota: z.string().optional(),
+});
+
+export async function registrarCompraInsumo(formData: FormData) {
+  const session = await getSession();
+  if (!session) throw new Error("No autenticado");
+
+  const parsed = registrarCompraSchema.safeParse({
+    insumoId: formData.get("insumoId"),
+    cantidad: formData.get("cantidad"),
+    fecha: formData.get("fecha") || new Date(),
+    costoUnitario: formData.get("costoUnitario") || undefined,
+    nota: formData.get("nota") || undefined,
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  const { insumoId, cantidad, fecha, costoUnitario, nota } = parsed.data;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.movimientoStock.create({
+      data: {
+        tipoItem: "INSUMO",
+        insumoId,
+        tipoMovimiento: "COMPRA",
+        cantidad,
+        costoUnitarioSnapshot: costoUnitario,
+        fecha,
+        nota,
+        createdById: session.user.id,
+      },
+    });
+
+    await tx.stockActual.update({
+      where: { insumoId },
+      data: { cantidadActual: { increment: cantidad } },
+    });
+
+    if (costoUnitario !== undefined) {
+      await tx.insumoCosto.updateMany({
+        where: { insumoId, vigenteHasta: null },
+        data: { vigenteHasta: fecha },
+      });
+      await tx.insumoCosto.create({
+        data: { insumoId, costoUnitario, vigenteDesde: fecha, nota: nota ?? "Actualizado desde compra" },
+      });
+    }
+  });
+
+  revalidatePath("/insumos");
+  revalidatePath("/stock");
+  return { success: true };
+}
+
 export async function toggleInsumoActivo(insumoId: string, activo: boolean) {
   const session = await getSession();
   if (!session) throw new Error("No autenticado");

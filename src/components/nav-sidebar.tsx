@@ -12,6 +12,9 @@ const links = [
   { href: "/skus", label: "Productos (SKU)" },
   { href: "/lotes", label: "Lotes de producción" },
   { href: "/stock", label: "Stock" },
+  { href: "/pedidos", label: "Pedidos" },
+  { href: "/gastos", label: "Gastos" },
+  { href: "/resultados", label: "Estado de resultados" },
 ];
 
 export function NavSidebar({ userName, role }: { userName: string; role: string }) {
