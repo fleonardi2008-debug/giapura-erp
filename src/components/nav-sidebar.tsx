@@ -16,6 +16,7 @@ const links = [
   { href: "/pedidos", label: "Pedidos" },
   { href: "/gastos", label: "Gastos" },
   { href: "/resultados", label: "Estado de resultados" },
+  { href: "/integraciones", label: "Integraciones" },
 ];
 
 export function NavSidebar({ userName, role }: { userName: string; role: string }) {

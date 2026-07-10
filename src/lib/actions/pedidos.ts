@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { Prisma } from "@/generated/prisma/client";
+import { registrarVentaItem } from "@/lib/ventas";
 
 const itemSchema = z.object({
   skuId: z.string().min(1),
@@ -80,25 +80,12 @@ export async function createPedidoManual(formData: FormData) {
           },
         });
 
-        const stockActual = await tx.stockActual.findUnique({ where: { skuId: item.skuId } });
-        const costoSnapshot = stockActual?.costoPromedioPonderado ?? new Prisma.Decimal(0);
-
-        await tx.movimientoStock.create({
-          data: {
-            tipoItem: "PRODUCTO_TERMINADO",
-            skuId: item.skuId,
-            tipoMovimiento: "VENTA",
-            cantidad: new Prisma.Decimal(item.cantidad).negated(),
-            costoUnitarioSnapshot: costoSnapshot,
-            pedidoId: pedido.id,
-            fecha,
-            createdById: session.user.id,
-          },
-        });
-
-        await tx.stockActual.update({
-          where: { skuId: item.skuId },
-          data: { cantidadActual: { decrement: item.cantidad } },
+        await registrarVentaItem(tx, {
+          pedidoId: pedido.id,
+          skuId: item.skuId,
+          cantidad: item.cantidad,
+          fecha,
+          createdById: session.user.id,
         });
       }
     });
