@@ -26,6 +26,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/integraciones?conectado=1", request.url));
   } catch (error) {
     console.error("Error conectando Tienda Nube:", error);
-    return NextResponse.redirect(new URL("/integraciones?error=conexion", request.url));
+    const detalle = error instanceof Error ? error.message : "Error desconocido";
+    const url = new URL("/integraciones", request.url);
+    url.searchParams.set("error", "conexion");
+    url.searchParams.set("detalle", detalle.slice(0, 300));
+    return NextResponse.redirect(url);
   }
 }

@@ -5,7 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { IntegracionesActions } from "@/components/integraciones/integraciones-actions";
 
-export default async function IntegracionesPage() {
+export default async function IntegracionesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; detalle?: string; conectado?: string }>;
+}) {
+  const params = await searchParams;
   const [conexion, skus] = await Promise.all([
     prisma.tiendaNubeConexion.findFirst({ where: { activo: true } }),
     prisma.sku.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
@@ -20,6 +25,13 @@ export default async function IntegracionesPage() {
         <h1 className="text-2xl font-semibold">Integraciones</h1>
         <p className="text-muted-foreground">Conexión con Tienda Nube: pedidos y stock.</p>
       </div>
+
+      {params.error && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
+          <p className="font-medium">No se pudo conectar.</p>
+          {params.detalle && <p className="mt-1 break-words font-mono text-xs">{params.detalle}</p>}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
