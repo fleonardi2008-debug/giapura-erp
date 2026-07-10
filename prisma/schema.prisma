@@ -387,8 +387,18 @@ model WebhookEvent {
 // ---------- Plan de lanzamiento ----------
 
 model PlanTareaProgreso {
-  // El id es el de la tarea declarada en src/lib/plan.ts, no un cuid.
+  // El id es el de la tarea (fija en src/lib/plan.ts, o el cuid de una PlanTareaCustom).
   id            String   @id
   hecho         Boolean  @default(false)
   actualizadoEn DateTime @updatedAt
+}
+
+model PlanTareaCustom {
+  id       String   @id @default(cuid())
+  faseNum  String
+  texto    String
+  puntos   Int
+  creadoEn DateTime @default(now())
+
+  @@index([faseNum])
 }

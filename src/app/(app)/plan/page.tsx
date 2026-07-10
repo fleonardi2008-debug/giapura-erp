@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/db";
 import { PlanChecklist } from "@/components/plan/plan-checklist";
+import { construirFases } from "@/lib/plan";
 
 export default async function PlanPage() {
-  const progreso = await prisma.planTareaProgreso.findMany({ where: { hecho: true } });
+  const [progreso, custom] = await Promise.all([
+    prisma.planTareaProgreso.findMany({ where: { hecho: true } }),
+    prisma.planTareaCustom.findMany({ orderBy: { creadoEn: "asc" } }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -13,7 +17,7 @@ export default async function PlanPage() {
         </p>
       </div>
 
-      <PlanChecklist hechas={progreso.map((p) => p.id)} />
+      <PlanChecklist fases={construirFases(custom)} hechas={progreso.map((p) => p.id)} />
     </div>
   );
 }

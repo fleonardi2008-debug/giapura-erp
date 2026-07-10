@@ -2,6 +2,7 @@ export type PlanTarea = {
   id: string;
   texto: string;
   puntos: number;
+  custom?: boolean;
 };
 
 export type PlanFase = {
@@ -12,7 +13,7 @@ export type PlanFase = {
   tareas: PlanTarea[];
 };
 
-export const PLAN_FASES: PlanFase[] = [
+export const PLAN_FASES_BASE: PlanFase[] = [
   {
     num: "1",
     titulo: "Hoy — destrabar",
@@ -57,14 +58,44 @@ export const PLAN_FASES: PlanFase[] = [
   },
 ];
 
-export const PLAN_TAREAS = PLAN_FASES.flatMap((fase) => fase.tareas);
+export const PLAN_FASE_NUMS = PLAN_FASES_BASE.map((fase) => fase.num);
 
-export const PLAN_TAREA_IDS = new Set(PLAN_TAREAS.map((tarea) => tarea.id));
+export const PLAN_TAREA_IDS_BASE = new Set(
+  PLAN_FASES_BASE.flatMap((fase) => fase.tareas).map((tarea) => tarea.id)
+);
 
-export const PLAN_PUNTOS_TOTALES = PLAN_TAREAS.reduce((suma, tarea) => suma + tarea.puntos, 0);
+export type PlanTareaCustom = {
+  id: string;
+  faseNum: string;
+  texto: string;
+  puntos: number;
+};
 
-export function puntosGanados(hechas: Set<string>) {
-  return PLAN_TAREAS.reduce((suma, tarea) => suma + (hechas.has(tarea.id) ? tarea.puntos : 0), 0);
+export function construirFases(custom: PlanTareaCustom[]): PlanFase[] {
+  return PLAN_FASES_BASE.map((fase) => ({
+    ...fase,
+    tareas: [
+      ...fase.tareas,
+      ...custom
+        .filter((tarea) => tarea.faseNum === fase.num)
+        .map((tarea) => ({ id: tarea.id, texto: tarea.texto, puntos: tarea.puntos, custom: true })),
+    ],
+  }));
+}
+
+export function todasLasTareas(fases: PlanFase[]) {
+  return fases.flatMap((fase) => fase.tareas);
+}
+
+export function puntosTotales(fases: PlanFase[]) {
+  return todasLasTareas(fases).reduce((suma, tarea) => suma + tarea.puntos, 0);
+}
+
+export function puntosGanados(fases: PlanFase[], hechas: Set<string>) {
+  return todasLasTareas(fases).reduce(
+    (suma, tarea) => suma + (hechas.has(tarea.id) ? tarea.puntos : 0),
+    0
+  );
 }
 
 export function hitoPara(pct: number) {
@@ -73,4 +104,73 @@ export function hitoPara(pct: number) {
   if (pct >= 40) return "🔥 rodando de verdad";
   if (pct > 0) return "🥜 arrancaste, seguí así";
   return "arrancando";
+}
+
+// ---------- Estimación de puntos ----------
+// El puntaje arranca en el peso típico de la fase y se ajusta según señales
+// en el texto de la tarea. Es una estimación: siempre se puede pisar a mano.
+
+const PUNTOS_MIN = 5;
+const PUNTOS_MAX = 25;
+
+const BASE_POR_FASE: Record<string, number> = { "1": 5, "2": 10, "3": 15, "4": 10 };
+
+const SENALES_RAPIDAS = [
+  "pedir", "pedile", "preguntar", "avisar", "mandar", "comprar", "contactar",
+  "llamar", "responder", "confirmar", "reservar", "anotar", "chequear", "mirar",
+];
+
+const SENALES_PESADAS = [
+  "grabar", "producir", "diseñar", "terminar", "desarrollar", "armar", "coordinar",
+  "sesión", "sesion", "lanzar", "migrar", "rediseñar", "estructura", "calendario",
+  "campaña", "campana", "negociar", "auditar", "filmar", "editar", "programar",
+];
+
+function normalizar(texto: string) {
+  return texto.toLowerCase();
+}
+
+function contieneAlguna(texto: string, palabras: string[]) {
+  return palabras.find((palabra) => texto.includes(palabra));
+}
+
+export type EstimacionPuntos = {
+  puntos: number;
+  razon: string;
+};
+
+export function estimarPuntos(faseNum: string, texto: string): EstimacionPuntos {
+  const base = BASE_POR_FASE[faseNum] ?? 10;
+  const limpio = normalizar(texto.trim());
+
+  if (limpio.length < 3) {
+    return { puntos: base, razon: `Peso típico de la fase ${faseNum}.` };
+  }
+
+  let puntos = base;
+  const motivos: string[] = [`base ${base} por la fase ${faseNum}`];
+
+  const rapida = contieneAlguna(limpio, SENALES_RAPIDAS);
+  const pesada = contieneAlguna(limpio, SENALES_PESADAS);
+
+  if (rapida && !pesada) {
+    puntos -= 5;
+    motivos.push(`“${rapida}” suena a trámite corto (−5)`);
+  }
+
+  if (pesada) {
+    puntos += 5;
+    motivos.push(`“${pesada}” implica producción o decisión pesada (+5)`);
+  }
+
+  // Una tarea larga, o con varias partes encadenadas, suele esconder más trabajo.
+  const partes = (limpio.match(/,| y | \+ /g) ?? []).length;
+  if (limpio.length > 70 || partes >= 2) {
+    puntos += 5;
+    motivos.push("tiene varias partes (+5)");
+  }
+
+  const acotado = Math.min(PUNTOS_MAX, Math.max(PUNTOS_MIN, puntos));
+
+  return { puntos: acotado, razon: motivos.join(", ") + "." };
 }

@@ -1,14 +1,15 @@
 "use client";
 
 import { useOptimistic, useTransition } from "react";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { togglePlanTarea, resetPlan } from "@/lib/actions/plan";
-import { PLAN_FASES, PLAN_PUNTOS_TOTALES, hitoPara, puntosGanados } from "@/lib/plan";
+import { NuevaTareaDialog } from "@/components/plan/nueva-tarea-dialog";
+import { eliminarPlanTarea, resetPlan, togglePlanTarea } from "@/lib/actions/plan";
+import { hitoPara, puntosGanados, puntosTotales, type PlanFase } from "@/lib/plan";
 
-export function PlanChecklist({ hechas }: { hechas: string[] }) {
+export function PlanChecklist({ fases, hechas }: { fases: PlanFase[]; hechas: string[] }) {
   const [pending, startTransition] = useTransition();
   const [optimistas, aplicarOptimista] = useOptimistic(
     hechas,
@@ -19,14 +20,23 @@ export function PlanChecklist({ hechas }: { hechas: string[] }) {
   );
 
   const hechasSet = new Set(optimistas);
-  const ganados = puntosGanados(hechasSet);
-  const pct = Math.round((ganados / PLAN_PUNTOS_TOTALES) * 100);
+  const totales = puntosTotales(fases);
+  const ganados = puntosGanados(fases, hechasSet);
+  const pct = totales === 0 ? 0 : Math.round((ganados / totales) * 100);
 
   function toggle(tareaId: string) {
     startTransition(async () => {
       aplicarOptimista(tareaId);
       const res = await togglePlanTarea(tareaId, !hechasSet.has(tareaId));
       if (res?.error) toast.error(res.error);
+    });
+  }
+
+  function eliminar(tareaId: string) {
+    if (!confirm("¿Borrar esta tarea?")) return;
+    startTransition(async () => {
+      await eliminarPlanTarea(tareaId);
+      toast.success("Tarea borrada");
     });
   }
 
@@ -46,14 +56,14 @@ export function PlanChecklist({ hechas }: { hechas: string[] }) {
           <p className="text-4xl font-semibold tracking-tight text-amber-600 dark:text-amber-400">
             {ganados}
             <span className="ml-1 font-mono text-base text-muted-foreground">
-              / {PLAN_PUNTOS_TOTALES} pts
+              / {totales} pts
             </span>
           </p>
           <p className="mt-1 font-mono text-sm text-muted-foreground">{hitoPara(pct)}</p>
         </div>
       </div>
 
-      {PLAN_FASES.map((fase) => (
+      {fases.map((fase) => (
         <section key={fase.num} className={cn(fase.masAdelante && "opacity-70")}>
           <div className="mb-3 flex items-baseline gap-2 border-b border-border pb-2">
             <span className="font-mono text-sm font-semibold text-amber-600 dark:text-amber-400">
@@ -69,7 +79,7 @@ export function PlanChecklist({ hechas }: { hechas: string[] }) {
             {fase.tareas.map((tarea) => {
               const hecha = hechasSet.has(tarea.id);
               return (
-                <li key={tarea.id}>
+                <li key={tarea.id} className="group relative">
                   <button
                     type="button"
                     onClick={() => toggle(tarea.id)}
@@ -93,10 +103,26 @@ export function PlanChecklist({ hechas }: { hechas: string[] }) {
                       +{tarea.puntos}
                     </span>
                   </button>
+
+                  {tarea.custom && (
+                    <button
+                      type="button"
+                      aria-label={`Borrar tarea: ${tarea.texto}`}
+                      disabled={pending}
+                      onClick={() => eliminar(tarea.id)}
+                      className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
                 </li>
               );
             })}
           </ul>
+
+          <div className="mt-2">
+            <NuevaTareaDialog faseNumInicial={fase.num} />
+          </div>
         </section>
       ))}
 
