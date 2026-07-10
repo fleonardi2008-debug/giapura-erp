@@ -383,3 +383,12 @@ model WebhookEvent {
 
   @@index([procesado])
 }
+
+// ---------- Plan de lanzamiento ----------
+
+model PlanTareaProgreso {
+  // El id es el de la tarea declarada en src/lib/plan.ts, no un cuid.
+  id            String   @id
+  hecho         Boolean  @default(false)
+  actualizadoEn DateTime @updatedAt
+}

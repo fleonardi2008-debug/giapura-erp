@@ -4,6 +4,7 @@ import { calcularCostoUnitario, getCostoFabricaVigente } from "@/lib/costing";
 import { RecetaEditor } from "@/components/skus/receta-editor";
 import { ActualizarCostoFabricaDialog } from "@/components/skus/actualizar-costo-fabrica-dialog";
 import { EditarEconomiaDialog } from "@/components/skus/editar-economia-dialog";
+import { EnvioGratisCalculator } from "@/components/skus/envio-gratis-calculator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Prisma } from "@/generated/prisma/client";
@@ -184,6 +185,18 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
               marginal y punto de equilibrio.
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Envío gratis a partir de...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EnvioGratisCalculator
+            contribucionMarginal={costo.contribucionMarginal ? costo.contribucionMarginal.toNumber() : null}
+            precioVenta={costo.precioVenta ? costo.precioVenta.toNumber() : null}
+          />
         </CardContent>
       </Card>
 
