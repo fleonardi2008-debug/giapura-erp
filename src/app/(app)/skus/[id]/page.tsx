@@ -5,6 +5,7 @@ import { RecetaEditor } from "@/components/skus/receta-editor";
 import { ActualizarCostoFabricaDialog } from "@/components/skus/actualizar-costo-fabrica-dialog";
 import { EditarEconomiaDialog } from "@/components/skus/editar-economia-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 function fmt(n: { toFixed: (d: number) => string } | null) {
   return n ? `$${n.toFixed(2)}` : "—";
@@ -66,6 +67,53 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
           ))}
         </div>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Desglose de insumos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Insumo</TableHead>
+                <TableHead>Cantidad por unidad</TableHead>
+                <TableHead>Costo por {sku.unidadMedida === "unidad" ? "kg/unidad" : sku.unidadMedida}</TableHead>
+                <TableHead>Subtotal</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {costo.detalleInsumos.map((item) => (
+                <TableRow key={item.insumoId}>
+                  <TableCell className="font-medium">{item.nombre}</TableCell>
+                  <TableCell>
+                    {item.cantidadPorUnidad.toString()} {item.unidadMedida}
+                  </TableCell>
+                  <TableCell>
+                    {item.costoPorUnidadMedida
+                      ? `$${item.costoPorUnidadMedida.toString()} / ${item.unidadMedida}`
+                      : "Sin costo cargado"}
+                  </TableCell>
+                  <TableCell>${item.subtotal.toFixed(2)}</TableCell>
+                </TableRow>
+              ))}
+              {costo.detalleInsumos.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    Esta receta todavía no tiene insumos.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          {costo.perdidaPct.greaterThan(0) && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Subtotal insumos: ${costo.costoInsumosBase.toFixed(2)} + {costo.perdidaPct.toString()}%
+              de merma = <span className="font-medium text-foreground">${costo.costoInsumos.toFixed(2)}</span>
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -35,9 +35,19 @@ export async function getRecetaVigente(skuId: string, fecha: Date = new Date()) 
   });
 }
 
+export type DetalleInsumo = {
+  insumoId: string;
+  nombre: string;
+  cantidadPorUnidad: Prisma.Decimal;
+  unidadMedida: string;
+  costoPorUnidadMedida: Prisma.Decimal | null;
+  subtotal: Prisma.Decimal;
+};
+
 export type CostoUnitarioBreakdown = {
   skuId: string;
   fecha: Date;
+  detalleInsumos: DetalleInsumo[];
   costoInsumosBase: Prisma.Decimal;
   perdidaPct: Prisma.Decimal;
   costoInsumos: Prisma.Decimal;
@@ -77,6 +87,7 @@ export async function calcularCostoUnitario(
 
   const faltantes: string[] = [];
   let costoInsumosBase = new Prisma.Decimal(0);
+  const detalleInsumos: DetalleInsumo[] = [];
 
   if (!receta) {
     faltantes.push("No hay receta vigente para este SKU.");
@@ -85,11 +96,26 @@ export async function calcularCostoUnitario(
       const costoInsumo = await getCostoInsumoVigente(item.insumoId, fecha);
       if (!costoInsumo) {
         faltantes.push(`Falta costo vigente de "${item.insumo.nombre}".`);
+        detalleInsumos.push({
+          insumoId: item.insumoId,
+          nombre: item.insumo.nombre,
+          cantidadPorUnidad: item.cantidadPorUnidad,
+          unidadMedida: item.unidadMedida,
+          costoPorUnidadMedida: null,
+          subtotal: new Prisma.Decimal(0),
+        });
         continue;
       }
-      costoInsumosBase = costoInsumosBase.plus(
-        costoInsumo.costoUnitario.times(item.cantidadPorUnidad)
-      );
+      const subtotal = costoInsumo.costoUnitario.times(item.cantidadPorUnidad);
+      costoInsumosBase = costoInsumosBase.plus(subtotal);
+      detalleInsumos.push({
+        insumoId: item.insumoId,
+        nombre: item.insumo.nombre,
+        cantidadPorUnidad: item.cantidadPorUnidad,
+        unidadMedida: item.unidadMedida,
+        costoPorUnidadMedida: costoInsumo.costoUnitario,
+        subtotal,
+      });
     }
   }
 
@@ -123,6 +149,7 @@ export async function calcularCostoUnitario(
   return {
     skuId,
     fecha,
+    detalleInsumos,
     costoInsumosBase,
     perdidaPct,
     costoInsumos,
