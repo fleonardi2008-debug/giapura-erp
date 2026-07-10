@@ -6,10 +6,19 @@ import { ActualizarCostoFabricaDialog } from "@/components/skus/actualizar-costo
 import { EditarEconomiaDialog } from "@/components/skus/editar-economia-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Prisma } from "@/generated/prisma/client";
 
 function fmt(n: { toFixed: (d: number) => string } | null) {
   return n ? `$${n.toFixed(2)}` : "—";
 }
+
+const TIPO_LABEL: Record<string, string> = {
+  INGREDIENTE: "Materia prima",
+  PACKAGING: "Packaging",
+  OTRO: "Otros insumos",
+};
+
+const TIPO_ORDEN = ["INGREDIENTE", "PACKAGING", "OTRO"];
 
 export default async function SkuDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -73,41 +82,60 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
           <CardTitle>Desglose de insumos</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Insumo</TableHead>
-                <TableHead>Cantidad por unidad</TableHead>
-                <TableHead>Costo por {sku.unidadMedida === "unidad" ? "kg/unidad" : sku.unidadMedida}</TableHead>
-                <TableHead>Subtotal</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {costo.detalleInsumos.map((item) => (
-                <TableRow key={item.insumoId}>
-                  <TableCell className="font-medium">{item.nombre}</TableCell>
-                  <TableCell>
-                    {item.cantidadPorUnidad.toString()} {item.unidadMedida}
-                  </TableCell>
-                  <TableCell>
-                    {item.costoPorUnidadMedida
-                      ? `$${item.costoPorUnidadMedida.toString()} / ${item.unidadMedida}`
-                      : "Sin costo cargado"}
-                  </TableCell>
-                  <TableCell>${item.subtotal.toFixed(2)}</TableCell>
-                </TableRow>
-              ))}
-              {costo.detalleInsumos.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    Esta receta todavía no tiene insumos.
-                  </TableCell>
-                </TableRow>
+          {costo.detalleInsumos.length === 0 ? (
+            <p className="text-center text-muted-foreground">Esta receta todavía no tiene insumos.</p>
+          ) : (
+            <div className="space-y-6">
+              {TIPO_ORDEN.filter((tipo) => costo.detalleInsumos.some((i) => i.tipo === tipo)).map(
+                (tipo) => {
+                  const items = costo.detalleInsumos.filter((i) => i.tipo === tipo);
+                  const subtotalGrupo = items.reduce(
+                    (sum, i) => sum.plus(i.subtotal),
+                    new Prisma.Decimal(0)
+                  );
+                  return (
+                    <div key={tipo}>
+                      <p className="mb-2 text-sm font-medium text-muted-foreground">
+                        {TIPO_LABEL[tipo] ?? tipo}
+                      </p>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Insumo</TableHead>
+                            <TableHead>Cantidad por unidad</TableHead>
+                            <TableHead>Costo por unidad de medida</TableHead>
+                            <TableHead>Subtotal</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {items.map((item) => (
+                            <TableRow key={item.insumoId}>
+                              <TableCell className="font-medium">{item.nombre}</TableCell>
+                              <TableCell>
+                                {item.cantidadPorUnidad.toString()} {item.unidadMedida}
+                              </TableCell>
+                              <TableCell>
+                                {item.costoPorUnidadMedida
+                                  ? `$${item.costoPorUnidadMedida.toString()} / ${item.unidadMedida}`
+                                  : "Sin costo cargado"}
+                              </TableCell>
+                              <TableCell>${item.subtotal.toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      <p className="mt-1 text-right text-sm text-muted-foreground">
+                        Subtotal {TIPO_LABEL[tipo]?.toLowerCase() ?? tipo}:{" "}
+                        <span className="font-medium text-foreground">${subtotalGrupo.toFixed(2)}</span>
+                      </p>
+                    </div>
+                  );
+                }
               )}
-            </TableBody>
-          </Table>
+            </div>
+          )}
           {costo.perdidaPct.greaterThan(0) && (
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="mt-4 text-sm text-muted-foreground">
               Subtotal insumos: ${costo.costoInsumosBase.toFixed(2)} + {costo.perdidaPct.toString()}%
               de merma = <span className="font-medium text-foreground">${costo.costoInsumos.toFixed(2)}</span>
             </p>

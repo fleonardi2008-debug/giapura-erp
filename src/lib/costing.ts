@@ -38,6 +38,7 @@ export async function getRecetaVigente(skuId: string, fecha: Date = new Date()) 
 export type DetalleInsumo = {
   insumoId: string;
   nombre: string;
+  tipo: string;
   cantidadPorUnidad: Prisma.Decimal;
   unidadMedida: string;
   costoPorUnidadMedida: Prisma.Decimal | null;
@@ -99,6 +100,7 @@ export async function calcularCostoUnitario(
         detalleInsumos.push({
           insumoId: item.insumoId,
           nombre: item.insumo.nombre,
+          tipo: item.insumo.tipo,
           cantidadPorUnidad: item.cantidadPorUnidad,
           unidadMedida: item.unidadMedida,
           costoPorUnidadMedida: null,
@@ -111,6 +113,7 @@ export async function calcularCostoUnitario(
       detalleInsumos.push({
         insumoId: item.insumoId,
         nombre: item.insumo.nombre,
+        tipo: item.insumo.tipo,
         cantidadPorUnidad: item.cantidadPorUnidad,
         unidadMedida: item.unidadMedida,
         costoPorUnidadMedida: costoInsumo.costoUnitario,
