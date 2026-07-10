@@ -53,6 +53,7 @@ export async function exchangeCodeForToken(code: string) {
     body: JSON.stringify({
       client_id: process.env.TIENDANUBE_CLIENT_ID,
       client_secret: process.env.TIENDANUBE_CLIENT_SECRET,
+      grant_type: "authorization_code",
       code,
     }),
   });
