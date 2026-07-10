@@ -40,14 +40,16 @@ function mapEstadoEnvio(
  * genera el pedido + movimientos de venta en nuestra base (si no fue procesado
  * antes) y reenvía el stock actualizado a Tienda Nube.
  */
-export async function procesarOrdenTiendaNube(tiendaNubeOrderId: string) {
+export async function procesarOrdenTiendaNube(
+  tiendaNubeOrderId: string
+): Promise<{ pedidoId: string; creado: boolean }> {
   const creds = await getCredentials();
   if (!creds) throw new Error("No hay conexión activa con Tienda Nube");
 
   const yaExiste = await prisma.pedido.findUnique({
     where: { tiendaNubeOrderId: String(tiendaNubeOrderId) },
   });
-  if (yaExiste) return yaExiste;
+  if (yaExiste) return { pedidoId: yaExiste.id, creado: false };
 
   const orden = await getOrder(creds, tiendaNubeOrderId);
 
@@ -69,6 +71,14 @@ export async function procesarOrdenTiendaNube(tiendaNubeOrderId: string) {
       cantidad: Number(item.quantity),
       precioUnitario: Number(item.price),
     });
+  }
+
+  if (sinMatch.length > 0) {
+    // El pedido se registra igual (con su total real), pero estos items no descuentan
+    // stock ni suman al CMV porque no matchearon contra ningún SKU nuestro.
+    console.warn(
+      `Pedido ${orden.id}: items sin SKU mapeado, no descuentan stock: ${sinMatch.join(", ")}`
+    );
   }
 
   const fecha = new Date(orden.created_at);
@@ -116,5 +126,5 @@ export async function procesarOrdenTiendaNube(tiendaNubeOrderId: string) {
     await reenviarStock(itemsResueltos.map((i) => i.skuId));
   }
 
-  return pedido;
+  return { pedidoId: pedido.id, creado: true };
 }

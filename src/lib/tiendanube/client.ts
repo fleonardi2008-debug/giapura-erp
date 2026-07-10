@@ -152,6 +152,32 @@ export async function getOrder(
   return (await tiendanubeFetch(creds, `/orders/${orderId}`)) as TiendanubeOrder;
 }
 
+/** Pedidos creados a partir de una fecha (ISO 8601), paginando hasta el final. */
+export async function listOrders(
+  creds: TiendanubeCredentials,
+  createdAtMin: Date
+): Promise<TiendanubeOrder[]> {
+  const orders: TiendanubeOrder[] = [];
+  const perPage = 100;
+  let page = 1;
+
+  for (;;) {
+    const query = new URLSearchParams({
+      created_at_min: createdAtMin.toISOString(),
+      status: "any",
+      page: String(page),
+      per_page: String(perPage),
+    });
+    const batch = (await tiendanubeFetch(creds, `/orders?${query}`)) as TiendanubeOrder[];
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    orders.push(...batch);
+    if (batch.length < perPage) break;
+    page++;
+  }
+
+  return orders;
+}
+
 export async function registerWebhooks(creds: TiendanubeCredentials, callbackUrl: string) {
   const eventos = ["order/created", "order/paid", "order/cancelled", "order/fulfilled"];
   for (const evento of eventos) {

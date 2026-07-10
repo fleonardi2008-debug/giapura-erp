@@ -15,5 +15,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/auth|login|_next/static|_next/image|favicon.ico).*)"],
+  // api/webhooks y api/cron quedan fuera del login: los llama Tienda Nube y Vercel Cron,
+  // no un usuario con sesión. Cada uno valida su propia autenticidad (firma HMAC y
+  // CRON_SECRET respectivamente).
+  matcher: [
+    "/((?!api/auth|api/webhooks|api/cron|login|_next/static|_next/image|favicon.ico).*)",
+  ],
 };

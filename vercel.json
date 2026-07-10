@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/reconciliar-tiendanube",
+      "schedule": "0 5 * * *"
+    }
+  ]
+}
