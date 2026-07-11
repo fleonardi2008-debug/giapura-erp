@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { procesarOrdenTiendaNube } from "@/lib/tiendanube/procesarPedido";
+import { procesarProductoActualizado } from "@/lib/tiendanube/procesarProducto";
 
 function verificarFirma(rawBody: string, signature: string | null): boolean {
   const secret = process.env.TIENDANUBE_CLIENT_SECRET;
@@ -37,6 +38,8 @@ export async function POST(request: NextRequest) {
   try {
     if (payload.event?.startsWith("order/") && payload.id) {
       await procesarOrdenTiendaNube(String(payload.id));
+    } else if (payload.event?.startsWith("product/") && payload.id) {
+      await procesarProductoActualizado(String(payload.id));
     }
     await prisma.webhookEvent.update({ where: { id: evento.id }, data: { procesado: true } });
   } catch (error) {

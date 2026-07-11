@@ -97,6 +97,13 @@ export type TiendanubeProduct = {
   variants: TiendanubeVariant[];
 };
 
+export async function getProduct(
+  creds: TiendanubeCredentials,
+  productId: string | number
+): Promise<TiendanubeProduct> {
+  return (await tiendanubeFetch(creds, `/products/${productId}`)) as TiendanubeProduct;
+}
+
 export async function getProducts(creds: TiendanubeCredentials): Promise<TiendanubeProduct[]> {
   const products: TiendanubeProduct[] = [];
   let page = 1;
@@ -180,7 +187,13 @@ export async function listOrders(
 }
 
 export async function registerWebhooks(creds: TiendanubeCredentials, callbackUrl: string) {
-  const eventos = ["order/created", "order/paid", "order/cancelled", "order/fulfilled"];
+  const eventos = [
+    "order/created",
+    "order/paid",
+    "order/cancelled",
+    "order/fulfilled",
+    "product/updated",
+  ];
   for (const evento of eventos) {
     try {
       await tiendanubeFetch(creds, "/webhooks", {
