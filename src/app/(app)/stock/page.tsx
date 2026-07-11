@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AjustarStockDialog } from "@/components/stock/ajustar-stock-dialog";
 
 export default async function StockPage() {
   const [insumos, skus] = await Promise.all([
@@ -74,6 +75,7 @@ export default async function StockPage() {
                 <TableHead>Stock actual</TableHead>
                 <TableHead>Costo promedio ponderado</TableHead>
                 <TableHead>Valor de stock</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -87,6 +89,13 @@ export default async function StockPage() {
                     <TableCell>{costo ? `$${costo.toString()}` : "—"}</TableCell>
                     <TableCell>
                       {cantidad && costo ? `$${cantidad.times(costo).toFixed(2)}` : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <AjustarStockDialog
+                        skuId={sku.id}
+                        skuNombre={sku.nombre}
+                        stockActual={cantidad?.toString() ?? "0"}
+                      />
                     </TableCell>
                   </TableRow>
                 );
