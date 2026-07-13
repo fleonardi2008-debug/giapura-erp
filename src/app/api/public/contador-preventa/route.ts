@@ -42,9 +42,10 @@ export async function GET() {
   }
 
   const ahora = new Date();
-  const dentroDeVentana =
+  // La urgencia es el TIEMPO: la preventa abre/cierra solo por la ventana horaria,
+  // no por llegar a un número de ventas.
+  const abierta =
     (!inicioAt || ahora >= inicioAt) && (!finAt || ahora <= finAt);
-  const abierta = dentroDeVentana && vendidos < objetivo;
 
   return NextResponse.json(
     {
