@@ -35,6 +35,7 @@ type Bloque = {
   tipo: string;
   titulo: string | null;
   cuerpo: string | null;
+  codigo: string | null;
   ctaTexto: string | null;
   ctaUrl: string | null;
   mediaUrl: string | null;
@@ -105,6 +106,14 @@ function BloqueForm({
       <div className="space-y-2">
         <Label htmlFor="cuerpo">Texto (opcional)</Label>
         <Textarea id="cuerpo" name="cuerpo" defaultValue={bloque?.cuerpo ?? ""} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="codigo">Código de descuento (opcional)</Label>
+        <Input id="codigo" name="codigo" defaultValue={bloque?.codigo ?? ""} placeholder="Ej: FUNDADOR15" />
+        <p className="text-xs text-muted-foreground">
+          Si lo completás, en la página aparece en un recuadro destacado con botón
+          &quot;Copiar&quot;.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="mediaUrl">Link de video o imagen (opcional)</Label>

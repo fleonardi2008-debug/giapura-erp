@@ -40,6 +40,7 @@ export async function GET() {
         tipo: b.tipo,
         titulo: b.titulo,
         cuerpo: b.cuerpo,
+        codigo: b.codigo,
         ctaTexto: b.ctaTexto,
         ctaUrl: b.ctaUrl,
         mediaUrl: b.mediaUrl,

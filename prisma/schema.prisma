@@ -424,6 +424,7 @@ model ClubBloque {
   tipo      ClubBloqueTipo @default(TEXTO)
   titulo    String?
   cuerpo    String? // texto (puede ser largo)
+  codigo    String? // código de descuento (se muestra en un chip con botón Copiar)
   ctaTexto  String? // texto del botón (opcional)
   ctaUrl    String? // link del botón (opcional)
   mediaUrl  String? // url de video (embed) o imagen, según el tipo
