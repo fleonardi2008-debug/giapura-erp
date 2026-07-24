@@ -3,7 +3,7 @@ import { ConfigForm } from "@/components/club/config-form";
 import { BloquesPanel } from "@/components/club/bloques-panel";
 import { HistorialPanel } from "@/components/club/historial-panel";
 
-const CLUB_URL = process.env.NEXT_PUBLIC_CLUB_URL ?? "https://giapura-club.vercel.app";
+const CLUB_URL = process.env.NEXT_PUBLIC_CLUB_URL ?? "https://club.giapura.com.ar";
 
 export default async function ClubPage() {
   const [config, bloques, historial, fundadores, totalFundadores] = await Promise.all([
