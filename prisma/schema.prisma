@@ -402,3 +402,71 @@ model PlanTareaCustom {
 
   @@index([faseNum])
 }
+
+// ---------- Club Fundadores ----------
+// Página pública (otro dominio) a la que llega el fundador por QR. El contenido se
+// edita desde el backoffice y se sirve por endpoints públicos, sin tocar código y sin
+// que cambie nunca la URL del QR.
+
+enum ClubBloqueTipo {
+  TEXTO
+  VIDEO
+  DESCUENTO
+  ENCUESTA
+  INVITACION
+  IMAGEN
+}
+
+// Bloques editables de la sección "Contenido dinámico". Se pueden crear, ordenar,
+// ocultar y borrar. Cambian por completo sin rediseñar la página.
+model ClubBloque {
+  id        String         @id @default(cuid())
+  tipo      ClubBloqueTipo @default(TEXTO)
+  titulo    String?
+  cuerpo    String? // texto (puede ser largo)
+  ctaTexto  String? // texto del botón (opcional)
+  ctaUrl    String? // link del botón (opcional)
+  mediaUrl  String? // url de video (embed) o imagen, según el tipo
+  orden     Int            @default(0)
+  visible   Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([orden])
+}
+
+// Hitos del "Historial del Ticket" (✓ desbloqueado / 🔒 bloqueado). Hace que el
+// acceso se sienta vivo.
+model ClubHistorialItem {
+  id           String   @id @default(cuid())
+  titulo       String
+  desbloqueado Boolean  @default(false)
+  orden        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([orden])
+}
+
+// Config de las partes fijas de la página (hero + footer). Fila única ("singleton").
+model ClubConfig {
+  id            String   @id @default("singleton")
+  heroTitulo    String   @default("Bienvenido al Club Fundadores")
+  heroSubtitulo String?
+  heroVideoUrl  String? // embed de YouTube/Vimeo sin listar
+  introTitulo   String   @default("Qué es este acceso")
+  introTexto    String?
+  novedadesTexto String?
+  footerTexto   String   @default("Gracias por haber estado desde el principio. — Fran")
+  updatedAt     DateTime @updatedAt
+}
+
+// Lista "Fundadores": mails de "Activar novedades". Separada del newsletter.
+model Fundador {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  origen    String   @default("club")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

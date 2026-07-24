@@ -16,6 +16,7 @@ const links = [
   { href: "/pedidos", label: "Pedidos" },
   { href: "/gastos", label: "Gastos" },
   { href: "/resultados", label: "Estado de resultados" },
+  { href: "/club", label: "Club Fundadores" },
   { href: "/integraciones", label: "Integraciones" },
 ];
 
