@@ -20,7 +20,8 @@ export function OPTIONS() {
  */
 export async function GET() {
   const skuCodigo = process.env.PREVENTA_SKU_CODIGO ?? "PACK LANZAMIENTO";
-  const objetivo = Number(process.env.PREVENTA_OBJETIVO ?? "1500");
+  // Tope de Tickets de Fundador: los primeros N que compran se llevan uno.
+  const objetivo = Number(process.env.PREVENTA_OBJETIVO ?? "1000");
   const inicioAt = process.env.PREVENTA_INICIO
     ? new Date(process.env.PREVENTA_INICIO)
     : null;
