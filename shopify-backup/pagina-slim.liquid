@@ -1,0 +1,400 @@
+{%- comment -%}
+  ==========================================================================
+  GIAPURA - Inicio completo (hero + caracteristicas + fundador + testimonios
+  + preguntas frecuentes + cobertura + cierre)
+  Para pegar en: Personalizar tema > Inicio > seccion "Liquid personalizado"
+  (reemplaza el bloque anterior, que solo tenia el hero)
+  ==========================================================================
+  Todos los archivos (fotos, capturas de testimonios, tipografia) ya estan
+  subidos en Contenido > Archivos y las URLs de mas abajo apuntan ahi. No
+  hace falta subir nada: copia este codigo tal cual y pegalo.
+  ==========================================================================
+{%- endcomment -%}
+
+{%- comment -%} Textos y enlaces principales {%- endcomment -%}
+{%- assign gia_titulo = 'La primera tanda nacional.' -%}
+{%- assign gia_cta_texto = 'Comprar' -%}
+{%- assign gia_whatsapp_numero = '' -%}
+
+{%- comment -%} Valor que se le comunica al Ticket de Fundador (solo texto) {%- endcomment -%}
+{%- assign gia_ticket_valor = '28.540' -%}
+
+{%- comment -%}
+  Link del boton: apunta al unico producto de la tienda. Si en algun
+  momento hay mas de un producto, reemplaza por:
+      assign gia_cta_url = '/products/el-handle-que-quieras'
+{%- endcomment -%}
+{%- assign gia_producto = collections.all.products.first -%}
+{%- if gia_producto -%}
+  {%- assign gia_cta_url = gia_producto.url -%}
+{%- else -%}
+  {%- assign gia_cta_url = '/collections/all' -%}
+{%- endif -%}
+
+{%- comment -%}
+  El contador (arranca/cierra la preventa) se lee en vivo desde el mismo
+  endpoint publico que usa giapura.com.ar, asi que se actualiza solo sin
+  tener que tocar este codigo cuando cambien las fechas.
+{%- endcomment -%}
+{%- assign gia_contador_url = 'https://giapura-erp.vercel.app/api/public/contador-preventa' -%}
+
+{%- comment -%} URLs reales del CDN (subidas el 26/8/2026) {%- endcomment -%}
+{%- assign gia_cdn = 'https://cdn.shopify.com/s/files/1/0995/7068/0129/files/' -%}
+{%- assign gia_v = '?v=1787758248' -%}
+{%- assign gia_img_fondo_url = 'https://cdn.shopify.com/s/files/1/0995/7068/0129/files/textura-mani.jpg?v=1787741938' -%}
+{%- assign gia_img_logo_url = 'https://cdn.shopify.com/s/files/1/0995/7068/0129/files/logo-blanco-recortado.png?v=1787741938' -%}
+{%- assign gia_img_dibujo_url = 'https://cdn.shopify.com/s/files/1/0995/7068/0129/files/hero-ilustracion.webp?v=1787741938' -%}
+{%- assign gia_img_logo_marron_url = 'https://cdn.shopify.com/s/files/1/0995/7068/0129/files/logo-marron.png?v=1787776076' -%}
+{%- assign gia_font_url = 'https://cdn.shopify.com/s/files/1/0995/7068/0129/files/Aileron-Bold.woff2?v=1787741938' -%}
+{%- assign gia_img_frasco_url = 'https://cdn.shopify.com/s/files/1/0995/7068/0129/files/frasco-bandera-v2.jpg?v=1788957760' -%}
+{%- assign gia_patron_marron_url = gia_cdn | append: 'patron-mani-marron.webp' | append: gia_v -%}
+{%- assign gia_patron_crema_url = gia_cdn | append: 'patron-mani-crema.webp' | append: gia_v -%}
+
+{%- comment -%}
+  27 capturas de testimonios: "archivo|ancho|alto" separadas por coma. El
+  ancho/alto real evita que la pagina salte de tamano mientras cargan.
+{%- endcomment -%}
+{%- assign gia_testimonios_raw = 'tj_01.jpg|900|900,tj_02.jpg|900|900,tj_03.jpg|900|900,tj_04.jpg|900|900,tj_05.jpg|900|900,tj_06.jpg|900|900,tj_07.jpg|900|900,tj_08.jpg|900|900,tj_09.jpg|900|900,tj_10.jpg|900|900,tj_11.jpg|900|900,tj_12.jpg|900|900,tj_13.jpg|900|900,tj_14.jpg|900|900,tj_15.jpg|900|900,tj_16.jpg|900|900,tj_17.jpg|900|900,tj_18.jpg|900|900,tj_19.jpg|900|900,tj_20.jpg|900|900,tj_21.jpg|900|900,tj_22.jpg|900|900,tj_23.jpg|900|900,tj_24.jpg|900|900,tj_25.jpg|900|900,tj_26.jpg|900|900' -%}
+{%- assign gia_testimonios = gia_testimonios_raw | split: ',' -%}
+
+{%- comment -%} Preguntas frecuentes: "pregunta::respuesta" separadas por | {%- endcomment -%}
+{%- assign gia_faq_raw = '&#191;Por qu&#233; la web est&#225; abierta solo 24 horas?::Es una preventa de la primera tanda nacional. Producimos seg&#250;n lo que se venda en esta ventana, y quienes compren se llevan el Ticket de Fundador. Pasadas las 24 horas, la tienda se cierra.|&#191;Cu&#225;ndo me llega el pedido?::Es una preventa: producimos cada frasco (y cada caja) reci&#233;n despu&#233;s de que cierra la ventana de venta. Te vamos a ir avisando el estado por email.|&#191;Hacen env&#237;os a todo el pa&#237;s?::S&#237;. Por primera vez, enviamos a toda la Argentina. El costo y el plazo dependen de tu localidad, y los ves al finalizar la compra.|&#191;Puedo hacer seguimiento de mi pedido?::S&#237;. Apenas despachamos tu pedido, te mandamos el n&#250;mero de seguimiento por mail para que lo puedas rastrear.|&#191;Qu&#233; pasa si mi pedido llega roto o da&#241;ado?::placeholder, se reemplaza abajo por el p&#225;rrafo con el link de whatsapp|&#191;Qu&#233; es el Ticket de Fundador?::Es el beneficio exclusivo para quienes compran en estas 24 horas. Despu&#233;s del cierre, deja de existir.|&#191;Por qu&#233; se separ&#243; el aceite en el frasco? &#191;Est&#225; vencido?::No, es normal: nuestra pasta de man&#237; no tiene estabilizantes ni conservantes agregados, as&#237; que un poco de aceite natural puede separarse arriba. Mezcl&#225; con una cuchara antes de usar y vuelve a su textura cremosa.|&#191;Cu&#225;nto dura el producto?::12 meses desde su elaboraci&#243;n. La fecha exacta de vencimiento est&#225; impresa en la etiqueta de cada frasco. Se conserva en un lugar fresco y seco, sin necesidad de heladera.|&#191;C&#243;mo pago?::El pago es a trav&#233;s de nuestra tienda, con los medios habituales (tarjeta, Mercado Pago). Al tocar &#8220;Quiero el m&#237;o&#8221; te llevamos directo al checkout.' -%}
+{%- assign gia_faq = gia_faq_raw | split: '|' -%}
+
+{%- assign gia_css_url = 'https://cdn.shopify.com/s/files/1/0995/7068/0129/files/pagina_54eea0e9-b6f4-4671-beb2-3593a61462f4.css?v=1788962811' -%}
+{%- assign gia_js_url = 'https://cdn.shopify.com/s/files/1/0995/7068/0129/files/pagina_c6af7c09-0a8f-487e-9907-ce986d09a662.js?v=1788045337' -%}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap">
+
+<link rel="stylesheet" href="{{ gia_css_url }}">
+
+<div id="gia-pagina" data-contador-url="{{ gia_contador_url }}">
+
+  {%- comment -%} ============================= HERO ============================= {%- endcomment -%}
+  <section class="gia-hero">
+    <img class="gia-hero__foto" src="{{ gia_img_fondo_url }}" alt="Textura de la pasta de man&#237; Giapura" fetchpriority="high" decoding="async">
+    <div class="gia-hero__velo"></div>
+
+    <div class="gia-hero__barra">
+      <div class="gia-hero__pastilla">
+        <div class="gia-contador" data-gia-contador="pastilla"></div>
+      </div>
+    </div>
+
+    <div class="gia-hero__centro">
+      <img class="gia-hero__logo" src="{{ gia_img_logo_url }}" alt="Giapura" width="582" height="181" fetchpriority="high">
+      <h1 class="gia-hero__titulo">{{ gia_titulo }}</h1>
+      <div class="gia-hero__cta">
+        <a class="gia-boton gia-boton--crema" href="{{ gia_cta_url }}" data-gia-cta>
+          <span class="gia-boton__brillo" aria-hidden="true"></span>
+          <span class="gia-boton__txt">{{ gia_cta_texto }}</span>
+          <span class="gia-boton__flecha" aria-hidden="true">&#8594;</span>
+        </a>
+        <p class="gia-preventa-nota" style="color:var(--gia-paper);text-shadow:0 1px 3px rgba(36,13,8,.5)">Es una preventa: el pedido puede<br>demorar hasta 45 d&#237;as h&#225;biles.</p>
+      </div>
+    </div>
+
+    <div class="gia-hero__fundido" aria-hidden="true"></div>
+    <div class="gia-hero__dibujo" aria-hidden="true">
+      <img src="{{ gia_img_dibujo_url }}" alt="" width="480" height="589" loading="lazy" decoding="async">
+    </div>
+  </section>
+
+  {%- comment -%} ===================== CARACTERISTICAS ===================== {%- endcomment -%}
+  <section id="gia-comprar" class="gia-comprar">
+    <div class="gia-patron" data-gia-patron style="--gia-op:.17">
+      <div style="background-image:url('{{ gia_patron_marron_url }}');background-size:460px auto;background-position:left bottom;-webkit-mask-image:linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.45) 34%, #000 78%, #000 100%);mask-image:linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.45) 34%, #000 78%, #000 100%)"></div>
+    </div>
+    <div class="gia-wrap gia-wrap--lg gia-comprar__grid">
+      <div class="gia-comprar__frasco gia-reveal">
+        <img
+          src="{{ gia_img_frasco_url }}&width=600"
+          srcset="{{ gia_img_frasco_url }}&width=400 400w, {{ gia_img_frasco_url }}&width=600 600w, {{ gia_img_frasco_url }}&width=900 900w"
+          sizes="(max-width: 1023px) 100vw, 29rem"
+          alt="Los dos frascos de pasta de man&#237; Giapura, natural y con cacao, frente a una bandera argentina"
+          width="1000" height="1250" loading="lazy" decoding="async">
+      </div>
+      <div class="gia-comprar__texto">
+        <p class="gia-comprar__eyebrow gia-reveal" style="transition-delay:.1s">Natural &middot; Con cacao</p>
+        <h2 class="gia-comprar__h2 gia-reveal" style="transition-delay:.15s">Volv&#233; a lo <span class="gia-grad">simple y real</span>.</h2>
+        <ul class="gia-caract">
+          <li class="gia-reveal" style="transition-delay:.1s">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width=".55" stroke-linejoin="round" aria-hidden="true"><path d="m2.24,17.29v-1c.07-.41.11-.83.22-1.23.73-2.54,2.34-4.3,4.78-5.28.8-.32,1.5-.75,2.06-1.41.43-.51.67-1.12.93-1.72,1.02-2.37,2.74-3.88,5.32-4.32.35-.06.71-.1,1.06-.15.44,0,.88,0,1.31,0,.06.04.13.03.19.03,1.18.08,2.34.31,3.47.67.19.06.28.16.33.34.58,1.84.86,3.71.62,5.63-.13,1.04-.42,2.02-.98,2.92-.88,1.41-2.15,2.33-3.68,2.91-1.36.52-2.31,1.43-2.81,2.79-.24.64-.53,1.25-.94,1.79-1.68,2.27-3.89,3.48-6.77,3.27-2.3-.17-4.29-1.84-4.91-4.07-.11-.39-.15-.79-.23-1.19Zm9.41-5.15s-.07.05-.1.07c-.56.46-1.2.8-1.87,1.08-.77.32-1.45.77-2.08,1.3-.13.11-.15.17-.03.31.72.86,1.51,1.66,2.38,2.37.11.09.18.11.28-.02.55-.65,1.01-1.35,1.33-2.13.27-.66.61-1.28,1.06-1.83.07-.09.06-.14-.01-.21-.29-.28-.57-.57-.86-.86-.03-.03-.06-.05-.09-.08Zm6.09-2.43s-.05-.07-.08-.11c-.73-.89-1.54-1.7-2.43-2.43-.1-.08-.15-.08-.24.02-.56.65-1.03,1.37-1.36,2.16-.27.65-.6,1.27-1.05,1.82-.07.08-.08.13,0,.21.29.28.58.57.86.86.08.08.13.07.21,0,.55-.45,1.16-.79,1.82-1.05.79-.32,1.5-.78,2.15-1.35.04-.04.1-.06.12-.14Zm3.03-5.5c0-.15,0-.15-.13-.14-.14.01-.29.03-.43.06-1.55.31-2.89,1.04-4.12,2.01-.12.09-.07.13.01.2.87.72,1.67,1.51,2.39,2.39.08.1.12.11.21,0,.63-.79,1.15-1.65,1.54-2.59.26-.63.45-1.27.52-1.94Zm-15.58,15.71s.09,0,.16-.01c1.39-.15,2.61-.7,3.71-1.55.13-.1.15-.15,0-.26-.76-.62-1.46-1.31-2.11-2.05-.12-.14-.22-.39-.36-.37-.13.02-.24.26-.35.41-.76,1.08-1.25,2.27-1.34,3.6-.02.25,0,.25.28.24ZM14.11,6.38c-.01-.06-.06-.08-.1-.1-.46-.31-.95-.58-1.45-.83-.12-.06-.19-.05-.28.06-.41.53-.76,1.1-1,1.73-.23.62-.51,1.21-.93,1.72-.08.1-.04.14.03.21.38.38.76.75,1.14,1.14.11.11.16.08.24-.03.25-.35.49-.71.65-1.11.4-.99.93-1.9,1.63-2.71.03-.03.05-.06.07-.09Zm5.33,6.03s-.04-.08-.06-.12c-.23-.5-.51-.97-.81-1.44-.08-.13-.13-.13-.25-.03-.73.63-1.55,1.14-2.44,1.5-.49.2-.94.45-1.36.77-.1.07-.11.12-.02.21.39.38.77.76,1.15,1.15.07.07.12.09.21.02.5-.4,1.05-.68,1.65-.9.66-.24,1.26-.59,1.8-1.03.05-.04.1-.06.12-.13Zm-12.68,1.33s.06-.05.09-.07c.8-.69,1.7-1.22,2.68-1.61.41-.16.79-.4,1.15-.67.09-.07.13-.11.02-.21-.4-.38-.78-.78-1.17-1.17-.07-.07-.12-.07-.19,0-.51.41-1.09.69-1.71.92-.65.24-1.23.59-1.77,1.02-.06.05-.12.09-.07.19.26.53.55,1.05.87,1.54.02.03.03.08.09.07Zm6.01,5.33s.05,0,.13-.1c.43-.53.78-1.11,1.01-1.75.23-.62.52-1.21.93-1.73.07-.09.04-.13-.02-.19-.39-.38-.78-.76-1.15-1.16-.11-.11-.15-.07-.22.02-.26.35-.49.71-.65,1.11-.4.99-.93,1.91-1.64,2.71-.08.09-.07.13.03.19.48.31.97.6,1.49.84.03.01.06.03.09.04Zm-8.93-.37c.1-.48.22-.91.38-1.33.37-.96.89-1.82,1.54-2.6.05-.05.13-.1.06-.2-.36-.51-.67-1.05-.96-1.6-1.4,1.64-1.81,4.04-1.03,5.74Zm2.31,2.3c1.82.83,4.26.27,5.73-1.03-.53-.27-1.04-.57-1.52-.91-.12-.08-.18-.07-.29.02-.69.59-1.46,1.06-2.29,1.42-.51.22-1.05.38-1.63.51ZM13.36,4.47c.03.07.08.08.12.1.48.25.94.52,1.38.83.11.08.18.07.29-.02.91-.78,1.91-1.4,3.01-1.87.04-.02.1-.01.09-.09-1.73-.12-3.4.02-4.88,1.04Zm8.04,2.09s-.05.03-.06.04c-.49,1.15-1.13,2.2-1.95,3.15-.07.08-.03.13.01.19.25.36.48.73.69,1.12.08.14.15.28.24.44,1.04-1.51,1.19-3.18,1.06-4.94Z"/></svg>
+            <span>100% man&#237; seleccionado</span>
+          </li>
+          <li class="gia-reveal" style="transition-delay:.15s">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width=".55" stroke-linejoin="round" aria-hidden="true"><path d="m1.44,14.39v-1.2c.08-.03.07-.11.07-.18.36-2.34,2.29-4.18,4.63-4.4,2.49-.24,4.76,1.25,5.52,3.64.05.15.11.2.27.2,1-.02,1.95.2,2.84.66.48.25.91.58,1.32.97.01-.05.03-.07.03-.09.04-.31.09-.61.12-.92.18-1.68.09-3.34-.26-4.99-.02-.12-.07-.16-.19-.16-.32,0-.65,0-.97,0-1.45-.03-2.52-1.11-2.53-2.55,0-.47,0-.95,0-1.42,0-.12.03-.21.12-.29.53-.52,1.05-1.05,1.58-1.58.05-.05.13-.09.13-.17,1.1,0,2.2,0,3.3,0,.03.01.06.03.09.04,1.1.19,1.86.81,2.27,1.84.14.34.25.7.38,1.04.57,1.45,1.01,2.94,1.34,4.46.43,1.93.71,3.88.88,5.85.13,1.55.2,3.1.2,4.66,0,.14-.05.22-.17.28-.3.15-.6.31-.89.48-1.51.86-3.1,1.53-4.79,1.97-2.15.55-4.34.57-6.54.51-.45-.01-.9-.08-1.35-.17-1.63-.33-3.06-1.05-4.3-2.15-1.56-1.4-2.56-3.13-2.94-5.2-.07-.38-.11-.76-.16-1.14Zm10.54,7.44c1.55.03,3.07-.14,4.58-.52,1.63-.41,3.14-1.12,4.61-1.93.15-.08.19-.18.19-.34-.02-2.81-.32-5.59-.88-8.34-.44-2.19-1.06-4.32-1.82-6.42-.25-.7-.85-1.12-1.59-1.12-.74,0-1.49,0-2.23,0-.1,0-.18.01-.26.09-.32.33-.64.65-.96.97-.06.06-.09.11-.09.2,0,.39,0,.77.02,1.16.04.56.48,1.01,1.03,1.11.29.05.58.02.87.03.38,0,.38,0,.38-.37,0-.52-.24-.79-.76-.84-.12,0-.15-.05-.15-.16,0-.3,0-.61,0-.91,0-.13.04-.17.17-.16.8.02,1.39.39,1.77,1.09.19.34.21.72.22,1.1,0,.36-.04.73.04,1.09.6,2.59.61,5.18,0,7.77-.03.11-.02.21.03.32.21.44.34.91.42,1.4.02.13.01.18-.14.19-.29.02-.59.06-.88.11-.13.02-.19,0-.21-.16-.06-.41-.18-.81-.38-1.17-.82-1.52-2.13-2.26-3.83-2.31-1.48-.04-2.77.42-3.77,1.57-.07.08-.11.06-.18,0-.24-.19-.47-.38-.72-.55-.14-.1-.13-.16-.03-.28.77-.89,1.74-1.46,2.87-1.76.18-.05.17-.1.12-.25-.81-2.22-3.41-3.24-5.53-2.18-1.51.76-2.34,2.32-2.2,4.1.14,1.82.8,3.43,2.02,4.8,1.31,1.46,2.94,2.33,4.88,2.61.8.11,1.59.06,2.39.08Z"/></svg>
+            <span>Energ&#237;a real, sin atajos</span>
+          </li>
+          <li class="gia-reveal" style="transition-delay:.2s">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="12" cy="12" r="10.5"/><path fill="currentColor" stroke="currentColor" stroke-width=".55" stroke-linejoin="round" transform="translate(3.2,3.2) scale(.73)" d="m19.55,22.71c-.26-.1-.46-.28-.66-.48-.41-.42-.84-.84-1.25-1.26-.09-.09-.17-.13-.3-.13-.34.02-.65-.07-.95-.21-1.11-.54-2.22-1.09-3.33-1.63-.34-.16-.5-.43-.5-.81,0-.71,0-1.43,0-2.14,0-.12-.03-.2-.12-.28-.33-.32-.65-.64-.98-.97-.06.07-.03.15-.03.22,0,1.04,0,2.09,0,3.13,0,.41-.17.69-.53.87-1.09.53-2.19,1.06-3.28,1.6-.62.3-1.23.3-1.84,0-1.09-.53-2.17-1.07-3.26-1.59-.38-.18-.55-.46-.54-.88,0-1.35,0-2.7,0-4.05,0-.69.26-1.17.91-1.47,1.15-.53,2.27-1.1,3.41-1.66.28-.14.55-.14.83,0,.29.15.59.29.91.4-.05-.05-.1-.11-.15-.16-1.4-1.41-2.81-2.81-4.21-4.22-.32-.32-.4-.69-.24-1.05.26-.58.99-.7,1.46-.24.73.72,1.45,1.45,2.17,2.17.05.05.08.12.13.19.09-.12.07-.19.07-.26,0-.86,0-1.73,0-2.59,0-.66.26-1.14.89-1.43,1.11-.52,2.2-1.07,3.3-1.61.13-.06.25-.12.38-.18.11,0,.22,0,.32,0,.31.15.63.3.94.45.21.11.28.27.19.44-.09.17-.25.21-.47.1-.23-.11-.46-.22-.69-.34-.09-.05-.17-.05-.27,0-1.19.58-2.38,1.17-3.57,1.75.02.07.09.08.13.1,1.13.56,2.27,1.11,3.4,1.67.09.05.17.07.28.02,1.16-.58,2.33-1.14,3.49-1.71.03-.01.06-.03.1-.06-.46-.23-.91-.45-1.35-.66-.05-.02-.1-.05-.14-.07-.2-.1-.28-.27-.19-.44.08-.16.25-.19.46-.1.16.08.33.16.49.24.33.16.65.32.98.48.49.24.75.65.75,1.18.02,1.47.01,2.94,0,4.41,0,.33-.19.57-.48.71-1.13.55-2.26,1.1-3.39,1.65-.41.2-.85.24-1.3.14-.19-.04-.36-.13-.54-.2-.02.07.03.09.06.12.48.49.97.97,1.45,1.46.1.1.14.11.2-.03.12-.27.32-.46.59-.59,1.2-.58,2.39-1.17,3.59-1.76.26-.13.52-.13.78,0,1.2.59,2.4,1.18,3.6,1.77.49.24.71.66.73,1.17.03.57.01,1.13,0,1.7,0,.2-.13.33-.3.33-.17,0-.3-.13-.3-.34,0-.53,0-1.07,0-1.6,0-.22,0-.23-.21-.13-1.15.56-2.3,1.13-3.46,1.69-.11.05-.16.12-.16.24,0,.82,0,1.65,0,2.47,0,.1.03.18.1.25.35.34.7.69,1.04,1.04.07.08.13.08.22.03.75-.37,1.51-.74,2.26-1.11.14-.07.2-.16.19-.32,0-.34,0-.69,0-1.03,0-.25.11-.4.3-.4.19,0,.31.14.31.39,0,.35,0,.7,0,1.05,0,.4-.17.68-.53.85-.65.31-1.29.63-1.94.95-.08.04-.15.08-.29.15.15.14.29.25.42.37.22.22.44.44.66.66.53.55.36,1.29-.36,1.54-.02,0-.03.02-.05.03h-.36Zm-13.14-4.8c0-.71,0-1.41,0-2.12,0-.12-.03-.2-.15-.25-.2-.09-.4-.19-.6-.29-.95-.47-1.91-.93-2.86-1.4-.21-.1-.21-.1-.22.14,0,.02,0,.04,0,.06,0,1.36,0,2.72,0,4.08,0,.18.07.28.23.35.5.24,1,.49,1.5.73.61.3,1.22.6,1.83.89.26.12.26.11.26-.16,0-.68,0-1.36,0-2.04Zm5.89-8.85c0,.71,0,1.42,0,2.12,0,.14.04.19.17.12.04-.02.08-.03.11-.05,1.12-.55,2.25-1.1,3.37-1.65.12-.06.17-.13.17-.27,0-1.41,0-2.82,0-4.23,0-.19-.06-.19-.21-.12-1.15.57-2.3,1.13-3.46,1.69-.13.06-.16.14-.16.27,0,.7,0,1.4,0,2.1Zm-5.29,8.85c0,.67,0,1.33,0,2,0,.33,0,.33.31.19,1.11-.54,2.22-1.09,3.33-1.63.12-.06.19-.14.18-.28,0-.15,0-.3,0-.44,0-1.13,0-2.26,0-3.4,0-.37-.2-.49-.53-.33-1.04.51-2.07,1.02-3.11,1.52-.13.06-.18.13-.17.27,0,.7,0,1.4,0,2.1Zm4.68-8.86c0-.68,0-1.36,0-2.04,0-.19-.06-.27-.22-.35-1.13-.54-2.25-1.09-3.37-1.64-.23-.11-.23-.11-.23.15,0,1.12,0,2.24,0,3.36,0,.11.04.19.11.26.49.49.98.98,1.47,1.47.04.04.09.09.14.11.63.31,1.27.62,1.9.93.14.07.2.05.2-.13,0-.71,0-1.41,0-2.12Zm9.31,4.23s-.06-.05-.09-.06c-1.16-.57-2.32-1.13-3.48-1.7-.12-.06-.21-.04-.32.01-.99.49-1.99.98-2.99,1.46-.18.09-.36.18-.55.27.03.02.04.04.06.05,1.18.58,2.37,1.16,3.55,1.74.09.05.16.03.25-.01.39-.19.78-.38,1.18-.58.8-.39,1.59-.78,2.4-1.18Zm-10.9.16c-.34-.33-.62-.67-1.05-.86-.72-.32-1.43-.69-2.14-1.04-.15-.07-.27-.07-.42,0-1.11.55-2.22,1.09-3.33,1.63-.06.03-.12.04-.16.11,1.2.59,2.41,1.18,3.6,1.76.08.04.14.03.21,0,1.09-.53,2.17-1.06,3.29-1.61Zm9.92,8.39c0-.14-.1-.21-.19-.3-5.09-5.1-10.18-10.2-15.27-15.3-.23-.23-.37-.26-.51-.13-.15.14-.12.3.12.53,5.09,5.1,10.18,10.2,15.27,15.3.05.05.1.11.17.14.19.11.42-.03.42-.25Zm-3.09-4.07s.04-.05.04-.06c0-.66,0-1.32,0-1.98,0-.08-.04-.12-.11-.15-1.19-.58-2.38-1.16-3.56-1.74-.04-.02-.09-.07-.12-.02-.02.03-.02.09-.02.14,0,.07.08.11.12.15.83.83,1.66,1.67,2.49,2.5.38.38.76.76,1.15,1.16Zm-3.76-1.19s0,.1,0,.16c0,.47,0,.94,0,1.41,0,.18.06.28.22.36,1.06.51,2.11,1.03,3.17,1.55.06.03.12.09.17.08-1.17-1.18-2.36-2.37-3.54-3.55Z"/><line x1="4.6" y1="4.6" x2="19.4" y2="19.4" stroke-linecap="round"/></svg>
+            <span>Sin az&#250;car agregada</span>
+          </li>
+          <li class="gia-reveal" style="transition-delay:.25s">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M227.42,39.86a12,12,0,0,0-11.28-11.28c-39.6-2.33-74.59,2.34-104,13.87C84,53.48,62.31,70.58,49.39,91.9c-17.62,29.11-17.66,64.45-.45,98.19L31.51,207.52a12,12,0,0,0,17,17l17.43-17.43c16.74,8.54,33.88,12.85,50.45,12.85a91.31,91.31,0,0,0,47.74-13.3c21.32-12.92,38.42-34.62,49.45-62.75C225.08,114.46,229.75,79.46,227.42,39.86ZM151.66,186.08C131.57,198.25,108,199.17,83.94,189l84.54-84.54a12,12,0,1,1,17,17L67,172.06c-10.14-24-9.22-47.63,3-67.72,20.91-34.53,70.54-53.72,134-52.25C205.38,115.53,186.19,165.17,151.66,186.08Z"/></svg>
+            <span>Sin conservantes</span>
+          </li>
+          <li class="gia-reveal" style="transition-delay:.3s">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208,36H48A20,20,0,0,0,28,56v56c0,54.29,26.32,87.22,48.4,105.29,23.71,19.39,47.44,26,48.44,26.29a12.1,12.1,0,0,0,6.32,0c1-.28,24.73-6.9,48.44-26.29,22.08-18.07,48.4-51,48.4-105.29V56A20,20,0,0,0,208,36Zm-4,76c0,35.71-13.09,64.69-38.91,86.15A126.28,126.28,0,0,1,128,219.38a126.14,126.14,0,0,1-37.09-21.23C65.09,176.69,52,147.71,52,112V60H204ZM79.51,144.49a12,12,0,1,1,17-17L112,143l47.51-47.52a12,12,0,0,1,17,17l-56,56a12,12,0,0,1-17,0Z"/></svg>
+            <span>Libre de gluten</span>
+          </li>
+          <li class="gia-reveal" style="transition-delay:.35s">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M178,36c-20.09,0-37.92,7.93-50,21.56C115.92,43.93,98.09,36,78,36a66.08,66.08,0,0,0-66,66c0,72.34,105.81,130.14,110.31,132.57a12,12,0,0,0,11.38,0C138.19,232.14,244,174.34,244,102A66.08,66.08,0,0,0,178,36Zm-5.49,142.36A328.69,328.69,0,0,1,128,210.16a328.69,328.69,0,0,1-44.51-31.8C61.82,159.77,36,131.42,36,102A42,42,0,0,1,78,60c17.8,0,32.7,9.4,38.89,24.54a12,12,0,0,0,22.22,0C145.3,69.4,160.2,60,178,60a42,42,0,0,1,42,42C220,131.42,194.18,159.77,172.51,178.36Z"/></svg>
+            <span>La misma receta de siempre</span>
+          </li>
+        </ul>
+        <div class="gia-comprar__cta gia-reveal" style="transition-delay:.45s">
+          <a class="gia-boton gia-boton--solid" href="{{ gia_cta_url }}" data-gia-cta>
+            <span class="gia-boton__brillo" aria-hidden="true"></span>
+            <span class="gia-boton__txt">Quiero el m&#237;o</span>
+            <span class="gia-boton__flecha" aria-hidden="true">&#8594;</span>
+          </a>
+          <div class="gia-contador-mini" data-gia-contador="mini"></div>
+          <p class="gia-preventa-nota" style="color:var(--gia-muted)">Es una preventa: el pedido puede<br>demorar hasta 45 d&#237;as h&#225;biles.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {%- comment -%} ========================= TICKET FUNDADOR ========================= {%- endcomment -%}
+  <section id="gia-fundador" class="gia-fundador" data-gia-solo-lanzamiento>
+    <div class="gia-puente" data-gia-puente="arriba" data-desde="bg" style="top:0;height:110px"></div>
+    <div class="gia-puente" data-gia-puente="abajo" data-desde="bg2" style="bottom:0;height:95px"></div>
+    <div class="gia-patron" data-gia-patron style="--gia-op:.17">
+      <div style="background-image:url('{{ gia_patron_marron_url }}');background-size:460px auto;background-position:left top;-webkit-mask-image:linear-gradient(to bottom, #000 0px, rgba(0,0,0,.8) 95px, transparent 215px);mask-image:linear-gradient(to bottom, #000 0px, rgba(0,0,0,.8) 95px, transparent 215px)"></div>
+    </div>
+    <div class="gia-patron" data-gia-patron style="--gia-op:.13">
+      <div style="background-image:url('{{ gia_patron_crema_url }}');background-size:460px auto;background-position:left top;-webkit-mask-image:linear-gradient(to bottom, transparent 0px, rgba(0,0,0,.22) 115px, #000 235px, #000 calc(100% - 190px), rgba(0,0,0,.35) calc(100% - 130px), transparent calc(100% - 80px));mask-image:linear-gradient(to bottom, transparent 0px, rgba(0,0,0,.22) 115px, #000 235px, #000 calc(100% - 190px), rgba(0,0,0,.35) calc(100% - 130px), transparent calc(100% - 80px))"></div>
+    </div>
+    <div class="gia-patron" data-gia-patron style="--gia-op:.17">
+      <div style="background-image:url('{{ gia_patron_marron_url }}');background-size:460px auto;background-position:left top;-webkit-mask-image:linear-gradient(to top, transparent 0px, transparent 35px, rgba(0,0,0,.55) 65px, #000 100px, rgba(0,0,0,.5) 145px, transparent 185px);mask-image:linear-gradient(to top, transparent 0px, transparent 35px, rgba(0,0,0,.55) 65px, #000 100px, rgba(0,0,0,.5) 145px, transparent 185px)"></div>
+    </div>
+
+    <div class="gia-wrap gia-wrap--sm">
+      <p class="gia-comprar__eyebrow gia-reveal" style="color:var(--gia-gold-bright)">Para los primeros</p>
+      <h2 class="gia-reveal" style="transition-delay:.05s">No est&#225;s por comprar solo una pasta de man&#237;.</h2>
+      <p class="gia-fundador__copy gia-fundador__copy--promesa gia-solo-movil gia-reveal" style="transition-delay:.1s">
+        <span>Todos los que compren durante las primeras 24 horas</span>
+        <span>van a convertirse en</span>
+        <span><strong style="color:var(--gia-gold-bright);font-weight:700">Fundadores de Giapura.</strong></span>
+      </p>
+      <p class="gia-fundador__copy gia-solo-desktop gia-reveal" style="transition-delay:.1s">
+        <span>Todos los que compren durante las primeras 24 horas</span>
+        <span>van a convertirse en Fundadores de Giapura.</span>
+      </p>
+      <p class="gia-fundador__copy gia-reveal" style="transition-delay:.15s">
+        <span>Y junto con su pedido van a recibir un <strong style="color:var(--gia-gold-bright);font-weight:600">Ticket de Fundador</strong>:</span>
+        <span>una tarjeta &#250;nica que acredita que estuvieron desde el principio.</span>
+      </p>
+    </div>
+
+    <div class="gia-wrap gia-reveal" style="margin-top:3.5rem" data-gia-contador="grande"></div>
+
+    <div class="gia-fundador__ticket gia-reveal" style="transition-delay:.1s">
+      <div class="gia-ticket-visual" data-gia-ticket role="img" aria-label="Ticket de Fundador Giapura">
+        <div class="gia-ticket-bg" aria-hidden="true"></div>
+        <div class="gia-ticket-grano" aria-hidden="true"></div>
+        <svg class="gia-ticket-marco" viewBox="0 0 1200 600" preserveAspectRatio="none" aria-hidden="true">
+          <rect x="26" y="26" width="1148" height="548" rx="16" fill="none" stroke="#4a1c05" stroke-width="3" stroke-opacity=".55"/>
+          <circle cx="26" cy="26" r="5" fill="#4a1c05" fill-opacity=".55"/>
+          <circle cx="1174" cy="26" r="5" fill="#4a1c05" fill-opacity=".55"/>
+          <circle cx="26" cy="574" r="5" fill="#4a1c05" fill-opacity=".55"/>
+          <circle cx="1174" cy="574" r="5" fill="#4a1c05" fill-opacity=".55"/>
+        </svg>
+        <div class="gia-ticket-contenido">
+          <img class="gia-ticket-logo" src="{{ gia_img_logo_marron_url }}" alt="Giapura" width="1219" height="422" loading="lazy" decoding="async">
+          <p class="gia-ticket-tag">Volv&#233; a lo simple y real.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="gia-wrap gia-wrap--sm gia-fundador__pregunta">
+      <h3 class="gia-reveal">&#191;Qu&#233; significa ser <span class="gia-grad">fundador</span>?</h3>
+      <p class="gia-fundador__linea1 gia-reveal" style="transition-delay:.08s">Significa haber confiado cuando todo esto reci&#233;n empezaba.</p>
+      <p class="gia-fundador__linea2 gia-reveal" style="transition-delay:.14s">Y esa confianza va a tener recompensas.</p>
+
+      <div class="gia-beneficios">
+        <p class="gia-chip gia-reveal" style="transition-delay:.26s;animation-delay:0s"><span class="gia-punto" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l5 5L19 7" stroke="#fff8ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Descuentos exclusivos</span></p>
+        <p class="gia-chip gia-reveal" style="transition-delay:.33s;animation-delay:.7s"><span class="gia-punto" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l5 5L19 7" stroke="#fff8ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Elecciones de la marca</span></p>
+        <p class="gia-chip gia-reveal" style="transition-delay:.4s;animation-delay:1.4s"><span class="gia-punto" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l5 5L19 7" stroke="#fff8ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Contenido exclusivo</span></p>
+        <p class="gia-chip gia-reveal" style="transition-delay:.47s;animation-delay:2.1s"><span class="gia-punto" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l5 5L19 7" stroke="#fff8ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Acceso anticipado a futuros eventos</span></p>
+        <p class="gia-chip gia-reveal" style="transition-delay:.54s;animation-delay:2.8s"><span class="gia-punto" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l5 5L19 7" stroke="#fff8ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Y m&#225;s cosas que vamos a ir construyendo juntos</span></p>
+      </div>
+    </div>
+
+    <div class="gia-wrap gia-wrap--sm gia-fundador__condicion">
+      <h3 class="gia-reveal">Pero hay una condici&#243;n.</h3>
+      <p class="gia-reveal" style="transition-delay:.08s">Los Tickets de Fundador<br class="gia-corte-movil"> solo existen durante<br class="gia-corte-movil"> las <strong style="color:var(--gia-paper);font-weight:600">primeras 24 horas</strong>.</p>
+      <p class="gia-fundador__despues gia-reveal" style="transition-delay:.14s">Despu&#233;s</p>
+      <p class="gia-fundador__nunca gia-reveal" style="transition-delay:.2s">No va a haber forma<br class="gia-corte-movil"> de conseguir uno.</p>
+
+      <div class="gia-valor gia-reveal" style="transition-delay:.28s">
+        <p class="gia-valor__label">Valor del Ticket de Fundador</p>
+        <p class="gia-valor__cifra">
+          <span class="gia-valor__tachado">${{ gia_ticket_valor }}</span>
+          <span class="gia-valor__flecha" aria-hidden="true">&#8594;</span>
+          <span class="gia-valor__gratis">Gratis</span>
+        </p>
+        <p class="gia-valor__nota">Se entrega junto a tu pedido, sin costo.</p>
+        <p class="gia-valor__cierre">Ma&#241;ana no existe.</p>
+      </div>
+
+      <div class="gia-fundador__final gia-reveal" style="transition-delay:.36s">
+        <a class="gia-boton gia-boton--solid" href="{{ gia_cta_url }}" data-gia-cta>
+          <span class="gia-boton__brillo" aria-hidden="true"></span>
+          <span class="gia-boton__txt">Quiero ser fundador</span>
+          <span class="gia-boton__flecha" aria-hidden="true">&#8594;</span>
+        </a>
+        <p class="gia-preventa-nota" style="color:rgba(245,238,223,.7)">Es una preventa: el pedido puede<br>demorar hasta 45 d&#237;as h&#225;biles.</p>
+      </div>
+    </div>
+  </section>
+
+  {%- comment -%} =========================== TESTIMONIOS =========================== {%- endcomment -%}
+  <section id="gia-opiniones" class="gia-testi">
+    <div class="gia-wrap gia-wrap--xl">
+      <h2 class="gia-reveal">No hace falta que me <span class="gia-grad">creas a m&#237;</span>.</h2>
+      <p class="gia-testi__sub gia-reveal" style="transition-delay:.08s">Capturas reales de clientes que ya la probaron.</p>
+
+      <div class="gia-carrusel gia-reveal" style="transition-delay:.12s">
+        <div class="gia-carrusel__pista" data-gia-pista data-gia-pista-set-size="{{ gia_testimonios.size }}">
+          {%- for rep in (1..3) -%}
+            {%- for item in gia_testimonios -%}
+              {%- assign partes = item | split: '|' -%}
+              <div class="gia-carrusel__item">
+                <img
+                  src="{{ gia_cdn }}{{ partes[0] }}{{ gia_v }}&width=500"
+                  srcset="{{ gia_cdn }}{{ partes[0] }}{{ gia_v }}&width=300 300w, {{ gia_cdn }}{{ partes[0] }}{{ gia_v }}&width=500 500w, {{ gia_cdn }}{{ partes[0] }}{{ gia_v }}&width=650 650w"
+                  sizes="(max-width: 639px) 78vw, (max-width: 1023px) 420px, 330px"
+                  alt="Captura de WhatsApp de un cliente de Giapura" width="{{ partes[1] }}" height="{{ partes[2] }}" loading="{% if rep == 2 %}eager{% else %}lazy{% endif %}" fetchpriority="low" decoding="async">
+              </div>
+            {%- endfor -%}
+          {%- endfor -%}
+        </div>
+        <button type="button" class="gia-flecha gia-flecha--izq" data-gia-flecha="izq" aria-label="Ver la captura anterior">
+          <svg viewBox="0 0 256 256" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M168.49,199.51a12,12,0,0,1-17,17l-80-80a12,12,0,0,1,0-17l80-80a12,12,0,0,1,17,17L97,128Z"/></svg>
+        </button>
+        <button type="button" class="gia-flecha gia-flecha--der" data-gia-flecha="der" aria-label="Ver la captura siguiente">
+          <svg viewBox="0 0 256 256" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"/></svg>
+        </button>
+      </div>
+
+      <div class="gia-testi__cta gia-reveal" style="transition-delay:.2s">
+        <a class="gia-boton gia-boton--solid" href="{{ gia_cta_url }}" data-gia-cta>
+          <span class="gia-boton__brillo" aria-hidden="true"></span>
+          <span class="gia-boton__txt">Yo tambi&#233;n quiero</span>
+          <span class="gia-boton__flecha" aria-hidden="true">&#8594;</span>
+        </a>
+        <div class="gia-contador-mini" data-gia-contador="mini"></div>
+        <p class="gia-preventa-nota" style="color:var(--gia-muted)">Es una preventa: el pedido puede<br>demorar hasta 45 d&#237;as h&#225;biles.</p>
+      </div>
+    </div>
+  </section>
+
+  {%- comment -%} ============================== FAQ ============================== {%- endcomment -%}
+  <section id="gia-faq" class="gia-faq">
+    <div class="gia-puente" data-gia-puente="arriba" data-desde="bg2" style="top:0;height:70px"></div>
+    <div class="gia-wrap gia-wrap--md">
+      <h2 class="gia-reveal">Preguntas <span class="gia-grad">frecuentes</span></h2>
+      <div class="gia-faq__lista">
+        {%- for par in gia_faq -%}
+          {%- assign qa = par | split: '::' -%}
+          <div class="gia-reveal">
+            <details>
+              <summary>{{ qa[0] }}<span class="gia-mas" aria-hidden="true">+</span></summary>
+              {%- if forloop.index == 5 -%}
+                <p>Es muy poco com&#250;n, pero si llega a pasar escribinos apenas lo recib&#237;s (con una foto) por Instagram (@giapura.mani) o por
+                  {%- if gia_whatsapp_numero != '' %} <a href="https://wa.me/{{ gia_whatsapp_numero }}" target="_blank" rel="noopener noreferrer">Whatsapp</a> {%- else %} Whatsapp {%- endif %}
+                  y lo resolvemos sin costo: te lo reponemos.</p>
+              {%- else -%}
+                <p>{{ qa[1] }}</p>
+              {%- endif -%}
+            </details>
+          </div>
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+
+  {%- comment -%} ============================ COBERTURA ============================ {%- endcomment -%}
+  <section id="gia-envios" class="gia-envios">
+    <div class="gia-puente" data-gia-puente="arriba" data-desde="bg" style="top:0;height:85px"></div>
+    <div class="gia-wrap gia-wrap--lg gia-envios__grid">
+      <div class="gia-envios__col">
+        <p class="gia-envios__eyebrow gia-reveal">&#191;Hasta d&#243;nde llegamos?</p>
+        <h2 class="gia-reveal" style="transition-delay:.05s">Ahora s&#237;, <span class="gia-grad">a todo el pa&#237;s</span>.</h2>
+        <p class="gia-reveal" style="transition-delay:.1s">Por primera vez, no importa d&#243;nde est&#233;s: Giapura llega hasta tu puerta con env&#237;os a toda la Argentina.</p>
+        <div class="gia-envios__stats gia-reveal" style="transition-delay:.2s">
+          <div><strong class="gia-grad">24</strong><span>Provincias</span></div>
+        </div>
+      </div>
+      <div class="gia-mapa-wrap gia-reveal" style="transition-delay:.15s">
+        <div class="gia-mapa-glow" aria-hidden="true"></div>
+        <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-label="Mapa de Argentina">
+          <defs>
+            <linearGradient id="gia-ar-fill" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f5cf89"/>
+              <stop offset="1" stop-color="#c88a3c"/>
+            </linearGradient>
+          </defs>
+          <g transform="translate(0,1024) scale(0.1,-0.1)" fill="url(#gia-ar-fill)" stroke="#6d2900" stroke-width="22" stroke-opacity="0.35" stroke-linejoin="round">
+            <path d="M4391 10161 c-19 -67 -29 -83 -64 -113 -23 -19 -67 -71 -99 -115 l-56 -81 26 -37 26 -36 -50 -152 -50 -152 -143 -75 c-127 -67 -145 -79 -167 -119 -13 -23 -24 -45 -24 -47 0 -2 14 -19 31 -39 26 -30 29 -36 14 -41 -12 -5 -14 -14 -9 -37 5 -25 2 -33 -22 -52 l-28 -22 43 -104 43 -103 -32 -29 c-49 -44 -51 -85 -6 -145 42 -58 46 -96 14 -113 -13 -7 -27 -18 -31 -25 -6 -10 -13 -11 -33 -2 -37 17 -60 -12 -87 -114 -18 -68 -34 -101 -77 -159 -29 -41 -67 -88 -83 -106 -25 -27 -29 -37 -25 -75 4 -36 -2 -57 -35 -123 l-40 -80 12 -82 c9 -62 9 -87 0 -107 -9 -20 -9 -32 -1 -51 16 -34 -16 -102 -50 -107 -21 -3 -24 -11 -33 -89 -6 -48 -17 -95 -25 -105 -8 -11 -16 -21 -17 -23 -1 -2 -9 2 -17 8 -16 13 -18 9 -31 -57 -9 -46 39 -190 69 -202 l21 -9 -22 -6 -21 -7 20 -46 c34 -80 66 -205 66 -258 0 -62 11 -103 22 -84 7 11 13 10 34 -4 29 -19 33 -38 11 -56 -20 -16 -20 -135 0 -170 22 -38 18 -54 -17 -73 -81 -45 -96 -67 -117 -167 -11 -52 -24 -96 -29 -98 -5 -1 -18 -9 -28 -17 -18 -15 -18 -16 4 -34 19 -16 24 -33 29 -99 6 -87 -2 -152 -19 -152 -6 0 -32 -19 -57 -43 -25 -24 -53 -48 -62 -53 -8 -5 -25 -23 -36 -40 -18 -26 -22 -46 -23 -135 -1 -57 2 -117 8 -134 7 -24 6 -34 -10 -51 -18 -20 -18 -22 5 -85 14 -35 27 -89 31 -119 4 -30 14 -62 23 -72 25 -27 7 -51 -62 -82 l-65 -29 0 -59 c0 -73 -33 -160 -58 -151 -13 6 -14 -2 -9 -58 6 -56 5 -66 -12 -79 -23 -17 -39 -70 -22 -70 19 0 12 -45 -14 -94 -20 -38 -23 -51 -14 -73 6 -18 8 -67 4 -133 -7 -97 -6 -108 14 -142 16 -27 21 -49 19 -85 -3 -48 -3 -48 -45 -57 -36 -7 -43 -13 -43 -33 0 -13 5 -33 10 -43 8 -15 6 -21 -10 -30 -15 -8 -20 -21 -20 -55 0 -55 24 -96 72 -126 44 -27 45 -32 18 -59 -12 -12 -20 -33 -20 -53 0 -30 4 -35 48 -53 l47 -20 -33 -19 c-29 -17 -33 -24 -29 -50 3 -16 -2 -51 -10 -77 -8 -26 -13 -54 -10 -62 4 -9 31 -16 81 -21 41 -3 80 -12 85 -19 6 -7 8 -27 5 -45 -5 -25 -11 -31 -33 -31 -15 0 -31 4 -36 9 -6 4 -42 4 -82 -2 -67 -10 -73 -13 -73 -34 0 -21 4 -23 58 -23 l57 -1 34 -49 c31 -46 32 -52 21 -80 -8 -19 -23 -33 -47 -41 -19 -6 -36 -16 -39 -23 -2 -6 4 -37 15 -69 l20 -58 -45 -22 -46 -22 29 -11 c24 -10 30 -22 44 -80 l17 -69 -45 -20 -45 -19 4 -51 c3 -27 8 -57 12 -66 5 -12 -5 -24 -42 -47 -69 -45 -88 -70 -100 -134 -10 -51 -9 -62 12 -114 l23 -56 -54 -87 c-29 -47 -66 -96 -81 -108 -16 -14 -59 -30 -104 -40 l-77 -16 -9 -41 c-4 -23 -4 -64 0 -93 5 -34 3 -82 -6 -140 l-14 -87 62 -64 61 -64 53 6 c28 3 76 9 105 12 49 6 53 5 64 -18 15 -32 5 -75 -20 -93 -20 -14 -20 -15 -2 -35 18 -20 18 -23 2 -83 l-16 -62 47 -48 48 -47 274 -10 c254 -9 281 -11 349 -35 41 -14 91 -25 111 -25 20 0 61 -8 91 -19 62 -21 149 -36 149 -25 0 4 -26 44 -59 88 -98 136 -141 239 -141 341 0 54 4 69 33 110 27 39 45 53 112 82 44 19 101 43 127 52 25 9 55 27 66 41 30 39 54 123 47 163 -6 28 -1 45 20 81 15 25 39 56 55 69 15 13 40 43 54 65 19 31 33 42 51 42 31 0 156 63 210 106 22 17 50 34 63 38 13 4 22 15 22 27 0 11 7 22 15 25 11 5 12 10 3 24 -9 14 -7 33 6 83 21 75 15 119 -17 140 -13 8 -63 18 -113 22 l-91 7 -98 78 c-53 42 -110 97 -126 121 -28 44 -28 45 -14 94 9 28 28 68 44 90 16 22 40 63 55 92 23 46 31 53 68 63 101 25 117 31 123 50 8 24 53 34 155 35 64 0 75 3 78 18 2 10 -4 27 -14 38 -17 18 -16 20 5 43 13 14 36 30 51 36 52 22 58 65 34 260 -5 42 -4 46 25 63 18 11 31 26 31 38 0 16 22 30 100 66 55 26 100 49 100 53 0 4 -17 12 -39 18 -67 20 -131 52 -131 65 0 19 85 57 128 57 43 0 62 -14 62 -46 0 -32 43 -44 111 -32 30 5 56 11 57 13 15 15 19 83 6 124 -24 83 -27 85 -114 57 -60 -19 -69 -24 -42 -25 24 -1 32 -5 32 -20 0 -22 -38 -32 -97 -24 -32 4 -40 9 -36 23 4 14 -6 20 -47 30 -45 11 -54 17 -66 46 -8 20 -14 68 -14 118 0 47 -4 95 -9 108 -4 13 -11 50 -15 84 -6 57 -5 61 19 74 22 12 37 10 132 -19 60 -18 128 -47 153 -63 l44 -31 108 7 c93 6 117 12 190 44 46 20 94 44 106 53 21 15 21 17 6 62 -9 26 -20 49 -25 53 -12 7 -11 71 1 79 6 3 10 20 10 36 0 46 17 72 44 65 21 -5 24 -1 33 52 10 55 9 59 -17 92 -43 55 -50 75 -50 134 0 64 13 72 53 32 14 -13 42 -29 63 -35 125 -35 496 16 836 114 152 44 301 130 319 185 6 19 33 60 58 90 26 30 74 91 106 135 49 66 60 89 65 132 8 69 -13 143 -40 143 -11 0 -43 12 -70 28 -41 22 -52 34 -61 66 -13 46 -5 99 22 142 26 43 24 52 -21 109 -32 41 -61 62 -162 115 -150 79 -163 96 -143 190 11 53 11 62 -6 90 -22 36 -23 51 -7 135 10 58 15 66 61 101 l49 39 -5 84 c-3 48 -1 94 5 107 8 16 6 33 -7 66 -16 43 -16 47 5 104 12 32 25 76 30 96 4 21 12 43 18 50 17 21 32 186 20 220 -12 35 -4 49 81 136 34 35 68 79 75 97 8 18 24 39 37 45 53 29 107 91 129 150 14 37 29 62 41 65 11 4 26 21 35 38 9 18 45 59 80 92 36 33 86 92 112 130 43 63 52 72 100 87 30 9 70 32 90 50 20 18 85 58 144 88 l107 55 42 73 c35 62 40 80 35 110 -3 20 0 51 6 68 9 27 7 46 -14 120 -22 80 -29 92 -71 127 l-46 40 -48 -13 c-26 -7 -55 -14 -65 -16 -13 -4 -17 -24 -23 -112 -5 -82 -13 -120 -32 -164 -22 -50 -34 -62 -106 -110 -45 -30 -91 -59 -101 -64 -11 -6 -24 -24 -30 -41 -15 -44 -17 -45 -72 -28 -27 8 -54 15 -60 15 -6 0 -25 -20 -43 -45 l-32 -45 -28 19 c-25 18 -30 19 -49 5 -19 -13 -28 -12 -84 3 -35 9 -82 29 -105 45 -40 27 -48 28 -167 31 -68 1 -127 5 -131 9 -4 4 13 33 39 65 35 46 48 73 59 125 14 65 65 170 110 225 13 15 33 44 45 64 l22 36 -44 60 c-57 77 -158 142 -271 173 -95 26 -93 24 -223 134 l-104 86 -60 0 c-57 0 -62 2 -156 69 -53 38 -108 81 -122 96 -14 15 -65 57 -115 94 -90 67 -90 68 -109 135 -18 64 -22 70 -72 102 -29 18 -69 54 -90 79 -52 64 -83 75 -212 72 -59 -1 -113 1 -121 3 -9 4 -20 -15 -36 -60 -12 -36 -30 -80 -39 -97 -9 -18 -16 -53 -16 -79 l0 -48 -60 102 c-75 126 -84 132 -223 132 l-103 0 -30 33 c-17 17 -47 56 -68 85 -21 28 -39 52 -40 52 -1 0 -12 -35 -25 -79z"/>
+            <path d="M3780 376 l0 -325 93 5 c107 7 238 -6 380 -38 l100 -22 66 19 c46 14 90 19 147 17 l81 -2 26 39 26 39 -67 7 c-37 4 -116 16 -175 27 -99 19 -114 25 -165 66 -31 24 -102 65 -157 91 -93 45 -105 53 -168 129 -58 71 -73 83 -107 88 -33 5 -39 11 -42 33 -2 15 4 35 15 48 19 21 19 22 -1 51 -54 74 -52 83 -52 -272z"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="gia-envios__cta gia-reveal" style="transition-delay:.1s">
+      <a class="gia-boton gia-boton--solid" href="{{ gia_cta_url }}" data-gia-cta>
+        <span class="gia-boton__brillo" aria-hidden="true"></span>
+        <span class="gia-boton__txt">Pedilo a tu casa</span>
+        <span class="gia-boton__flecha" aria-hidden="true">&#8594;</span>
+      </a>
+      <p class="gia-preventa-nota" style="color:var(--gia-muted)">Es una preventa: el pedido puede<br>demorar hasta 45 d&#237;as h&#225;biles.</p>
+    </div>
+  </section>
+
+  {%- comment -%} ============================== GRACIAS ============================== {%- endcomment -%}
+  <section id="gia-gracias" class="gia-gracias">
+    <div class="gia-puente" data-gia-puente="arriba" data-desde="bg2" style="top:0;height:90px"></div>
+    <div class="gia-aurora" aria-hidden="true">
+      <span style="left:-6rem;top:0;height:24rem;width:24rem;background:rgba(245,207,137,.2)"></span>
+      <span style="right:-6rem;bottom:0;height:28rem;width:28rem;background:rgba(128,97,59,.25)"></span>
+    </div>
+
+    <div class="gia-wrap gia-wrap--sm" style="position:relative;z-index:2">
+      <p class="gia-gracias__eyebrow gia-reveal">Gracias</p>
+      <div class="gia-gracias__copy">
+        <p class="gia-reveal" style="transition-delay:.05s">Si llegaste hasta ac&#225;, es porque decidiste ser parte de esta historia.</p>
+        <p class="gia-reveal" style="transition-delay:.1s">Hace seis meses esto era una idea.<br>Hoy puedo hacer env&#237;os a <strong style="color:var(--gia-paper);font-weight:600">todo el pa&#237;s</strong>.</p>
+        <p class="gia-gracias__cita gia-reveal" style="transition-delay:.15s">
+          <span>Ojal&#225; dentro de unos a&#241;os</span>
+          <span>podamos mirar para atr&#225;s y decir:</span>
+          <span>&#8220;que locura haber estado desde el principio&#8221;.</span>
+        </p>
+        <p class="gia-reveal" style="transition-delay:.2s;font-weight:600;color:var(--gia-paper)">Gracias por confiar.</p>
+        <p class="gia-gracias__fran gia-reveal" style="transition-delay:.25s">&#8212; Fran</p>
+      </div>
+
+      <div class="gia-gracias__cta gia-reveal" style="transition-delay:.3s">
+        <a class="gia-boton gia-boton--outline" href="{{ gia_cta_url }}" data-gia-cta>
+          <span class="gia-boton__brillo" aria-hidden="true"></span>
+          <span class="gia-boton__txt">Quiero ser parte</span>
+          <span class="gia-boton__flecha" aria-hidden="true">&#8594;</span>
+        </a>
+        <p class="gia-preventa-nota" style="color:rgba(245,238,223,.7);margin-left:auto;margin-right:auto">Es una preventa: el pedido puede<br>demorar hasta 45 d&#237;as h&#225;biles.</p>
+      </div>
+    </div>
+  </section>
+
+  {%- if gia_whatsapp_numero != '' -%}
+  <a class="gia-whatsapp" href="https://wa.me/{{ gia_whatsapp_numero }}?text=Hola!%20Tengo%20una%20duda%20sobre%20Giapura." target="_blank" rel="noopener noreferrer" aria-label="Escribinos por WhatsApp">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16.004 3C9.377 3 4 8.373 4 15c0 2.34.65 4.53 1.78 6.4L4 29l7.79-1.74A11.9 11.9 0 0 0 16.004 27C22.63 27 28 21.627 28 15S22.63 3 16.004 3Zm0 21.7c-1.98 0-3.83-.55-5.41-1.5l-.39-.23-4.62 1.03 1.06-4.5-.25-.4A9.63 9.63 0 0 1 5.3 15c0-5.9 4.8-10.7 10.7-10.7S26.7 9.1 26.7 15 21.9 24.7 16.004 24.7Zm5.87-8.02c-.32-.16-1.9-.94-2.2-1.05-.29-.11-.51-.16-.72.16-.21.32-.83 1.05-1.02 1.26-.19.21-.37.24-.69.08-.32-.16-1.34-.5-2.55-1.58-.94-.84-1.58-1.88-1.76-2.2-.19-.32-.02-.49.14-.65.14-.14.32-.37.48-.55.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.72-1.75-.99-2.39-.26-.63-.53-.55-.72-.55h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.09-1.11 2.65 0 1.56 1.14 3.07 1.3 3.28.16.21 2.24 3.42 5.42 4.79.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.9-.78 2.17-1.53.27-.75.27-1.4.19-1.53-.08-.13-.29-.21-.61-.37Z"/></svg>
+  </a>
+  {%- endif -%}
+
+</div>
+
+<script src="{{ gia_js_url }}" defer></script>

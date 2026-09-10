@@ -1,0 +1,170 @@
+{%- comment -%}
+  ==========================================================================
+  GIAPURA - Bloque para la pagina de PRODUCTO: testimonios (carrusel
+  infinito) + preguntas frecuentes orientadas a la decision de compra.
+  Para pegar en: Personalizar tema > pagina de un Producto > agregar
+  seccion "Liquid personalizado", debajo del bloque de info del producto.
+  ==========================================================================
+{%- endcomment -%}
+
+{%- assign gia_cdn = 'https://cdn.shopify.com/s/files/1/0995/7068/0129/files/' -%}
+{%- assign gia_v = '?v=1787758248' -%}
+{%- assign gia_testimonios_raw = 'tj_01.jpg|900|900,tj_02.jpg|900|900,tj_03.jpg|900|900,tj_04.jpg|900|900,tj_05.jpg|900|900,tj_06.jpg|900|900,tj_07.jpg|900|900,tj_08.jpg|900|900,tj_09.jpg|900|900,tj_10.jpg|900|900,tj_11.jpg|900|900,tj_12.jpg|900|900,tj_13.jpg|900|900,tj_14.jpg|900|900,tj_15.jpg|900|900,tj_16.jpg|900|900,tj_17.jpg|900|900,tj_18.jpg|900|900,tj_19.jpg|900|900,tj_20.jpg|900|900,tj_21.jpg|900|900,tj_22.jpg|900|900,tj_23.jpg|900|900,tj_24.jpg|900|900,tj_25.jpg|900|900,tj_26.jpg|900|900' -%}
+{%- assign gia_testimonios = gia_testimonios_raw | split: ',' -%}
+
+{%- comment -%} pregunta::respuesta separadas por | {%- endcomment -%}
+{%- assign gia_faq_raw = '&#191;Es seguro comprar en esta p&#225;gina?::S&#237;. El pago se procesa en el checkout oficial de Shopify; tus datos de tarjeta nunca pasan por nosotros.|&#191;Cu&#225;ndo voy a recibir mi pedido?::Es una preventa: producimos cada frasco reci&#233;n despu&#233;s de que cierra la ventana de venta, y hacemos env&#237;os a toda la Argentina. Te vamos avisando el estado por email.|&#191;Puedo hacer seguimiento de mi env&#237;o?::S&#237;. Apenas despachamos tu pedido, te mandamos el n&#250;mero de seguimiento por mail para que lo puedas rastrear.|&#191;Qu&#233; pasa si mi pedido llega roto o da&#241;ado?::Es muy poco com&#250;n, pero si llega a pasar escribinos apenas lo recib&#237;s (con una foto y video) por Instagram (@giapura.mani) o por <a href="https://wa.me/5491159259791" target="_blank" rel="noopener noreferrer">Whatsapp</a> y lo resolvemos sin costo: reenv&#237;o o reembolso, como prefieras.|&#191;Puedo cambiar o cancelar mi pedido despu&#233;s de comprarlo?::Escribinos apenas puedas por Instagram o por <a href="https://wa.me/5491159259791" target="_blank" rel="noopener noreferrer">Whatsapp</a>. Si todav&#237;a no despachamos tu pedido, lo modificamos sin problema.|&#191;Qu&#233; medios de pago aceptan?::Tarjeta de cr&#233;dito, d&#233;bito y Mercado Pago, a trav&#233;s del checkout seguro de la tienda.|&#191;El envase llega bien protegido para el env&#237;o?::S&#237;, cada frasco se empaqueta con protecci&#243;n especial para que llegue entero pase lo que pase en el camino.' -%}
+{%- assign gia_faq = gia_faq_raw | split: '|' -%}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap">
+
+<style>
+  #gia-prod * { box-sizing: border-box; }
+  /* Full-bleed: la seccion del tema tiene padding lateral (page-width) que
+     dejaba franjas crema a los costados. Esto lo cancela para que el beige
+     llegue de punta a punta, sin importar ese padding. html,body overflow-x
+     evita que el 100vw (que no descuenta el ancho de la scrollbar) genere
+     scroll horizontal en toda la pagina. */
+  html, body { overflow-x: hidden; }
+  #gia-prod {
+    font-family: 'Aileron', 'Helvetica Neue', Arial, sans-serif; background: #E6D7AC; padding: 4rem 1.5rem 4.5rem;
+    width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw);
+  }
+  #gia-prod .gia-p-wrap { max-width: 72rem; margin: 0 auto; }
+  #gia-prod h2 { font-family: 'Playfair Display', ui-serif, Georgia, serif; margin: 0; font-size: 2rem; font-weight: 600; line-height: 1.15; color: #240D08; text-align: center; }
+  #gia-prod .gia-p-grad { color: #6D2900; }
+  #gia-prod .gia-p-sub { margin: 0 auto; max-width: 32rem; font-family: 'Playfair Display', ui-serif, Georgia, serif; font-size: 1.625rem; font-weight: 600; line-height: 1.2; color: #240D08; text-align: center; }
+  @media (min-width: 640px) { #gia-prod .gia-p-sub { font-size: 2.25rem; } }
+
+  #gia-prod .gia-p-carrusel { position: relative; margin-top: 2rem; }
+  #gia-prod .gia-p-pista { display: flex; gap: 1rem; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 8vw 1rem; -ms-overflow-style: none; scrollbar-width: none; }
+  #gia-prod .gia-p-pista::-webkit-scrollbar { display: none; }
+  #gia-prod .gia-p-item { flex: 0 0 auto; width: 78vw; aspect-ratio: 1 / 1; height: auto; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; }
+  #gia-prod .gia-p-item img {
+    max-height: 100%; max-width: 100%; width: auto; height: auto; border-radius: 1.25rem;
+    border: 1px solid rgba(109,41,0,.18);
+    box-shadow: 0 16px 34px -16px rgba(36,13,8,.35), 0 0 0 1px rgba(255,255,255,.5), inset 0 1px 0 rgba(255,255,255,.35);
+    transition: transform 300ms cubic-bezier(.16,1,.3,1);
+  }
+  #gia-prod .gia-p-item img:hover { transform: translateY(-3px); }
+  #gia-prod .gia-p-flecha {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; display: flex; height: 34px; width: 34px; align-items: center; justify-content: center;
+    border-radius: 9999px; border: 1px solid rgba(109,41,0,.2); background: rgba(255,255,255,.65); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    color: #4A1C05; box-shadow: 0 6px 16px -8px rgba(36,13,8,.25); cursor: pointer; transition: background 250ms ease, box-shadow 250ms ease;
+  }
+  #gia-prod .gia-p-flecha svg { width: 14px; height: 14px; }
+  #gia-prod .gia-p-flecha:hover { background: rgba(255,255,255,.95); }
+  #gia-prod .gia-p-flecha:active { transform: translateY(-50%) scale(.9); }
+  #gia-prod .gia-p-flecha--izq { left: -4px; } #gia-prod .gia-p-flecha--der { right: -4px; }
+  @media (min-width: 640px) {
+    #gia-prod h2 { font-size: 2.75rem; }
+    #gia-prod .gia-p-carrusel { max-width: 40rem; margin-left: auto; margin-right: auto; }
+    #gia-prod .gia-p-item { width: 420px; aspect-ratio: 1 / 1; height: auto; }
+    #gia-prod .gia-p-flecha--izq { left: -56px; } #gia-prod .gia-p-flecha--der { right: -56px; }
+  }
+  @media (min-width: 1024px) {
+    #gia-prod .gia-p-carrusel { max-width: 64rem; }
+    #gia-prod .gia-p-pista { padding: 0 1.5rem 1rem; }
+    #gia-prod .gia-p-item { width: calc((100% - 2rem) / 3); aspect-ratio: 1 / 1; height: auto; }
+    #gia-prod .gia-p-flecha--izq { left: -64px; } #gia-prod .gia-p-flecha--der { right: -64px; }
+  }
+
+  #gia-prod .gia-p-faq { margin-top: 4.5rem; }
+  #gia-prod .gia-p-faq-lista { margin-top: 2rem; display: flex; flex-direction: column; gap: .6rem; max-width: 44rem; margin-left: auto; margin-right: auto; }
+  #gia-prod .gia-p-faq-lista details { border-radius: 1rem; border: 1px solid rgba(109,41,0,.15); background: #FFFDF7; padding: .85rem 1.15rem; text-align: left; }
+  #gia-prod .gia-p-faq-lista summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; font-weight: 700; color: #240D08; list-style: none; }
+  #gia-prod .gia-p-faq-lista summary::-webkit-details-marker { display: none; }
+  #gia-prod .gia-p-faq-lista summary .gia-p-mas { color: #6D2900; flex-shrink: 0; transition: transform 200ms; font-size: 1.25rem; line-height: 1; }
+  #gia-prod .gia-p-faq-lista details[open] summary .gia-p-mas { transform: rotate(45deg); }
+  #gia-prod .gia-p-faq-lista p { margin: .75rem 0 0; font-size: .875rem; font-weight: 700; line-height: 1.6; color: #4A1C05; }
+  #gia-prod .gia-p-faq-lista a { color: #6D2900; text-decoration: underline; text-underline-offset: 2px; }
+</style>
+
+<div id="gia-prod">
+  <div class="gia-p-wrap">
+    <p class="gia-p-sub" style="margin-top:0">Capturas reales de clientes que ya la probaron.</p>
+
+    <div class="gia-p-carrusel">
+      <div class="gia-p-pista" data-gia-p-pista data-gia-p-set-size="{{ gia_testimonios.size }}">
+        {%- for rep in (1..3) -%}
+          {%- for item in gia_testimonios -%}
+            {%- assign partes = item | split: '|' -%}
+            <div class="gia-p-item">
+              <img src="{{ gia_cdn }}{{ partes[0] }}{{ gia_v }}" alt="Captura de WhatsApp de un cliente de Giapura" width="{{ partes[1] }}" height="{{ partes[2] }}" loading="lazy" decoding="async">
+            </div>
+          {%- endfor -%}
+        {%- endfor -%}
+      </div>
+      <button type="button" class="gia-p-flecha gia-p-flecha--izq" data-gia-p-flecha="izq" aria-label="Ver la captura anterior">
+        <svg viewBox="0 0 256 256" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M168.49,199.51a12,12,0,0,1-17,17l-80-80a12,12,0,0,1,0-17l80-80a12,12,0,0,1,17,17L97,128Z"/></svg>
+      </button>
+      <button type="button" class="gia-p-flecha gia-p-flecha--der" data-gia-p-flecha="der" aria-label="Ver la captura siguiente">
+        <svg viewBox="0 0 256 256" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"/></svg>
+      </button>
+    </div>
+
+    <div class="gia-p-faq">
+      <h2>Antes de comprar</h2>
+      <div class="gia-p-faq-lista">
+        {%- for par in gia_faq -%}
+          {%- assign qa = par | split: '::' -%}
+          <details>
+            <summary>{{ qa[0] }}<span class="gia-p-mas" aria-hidden="true">+</span></summary>
+            <p>{{ qa[1] }}</p>
+          </details>
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var raiz = document.getElementById('gia-prod');
+  if (!raiz) return;
+  var pista = raiz.querySelector('[data-gia-p-pista]');
+  if (!pista) return;
+  var flIzq = raiz.querySelector('[data-gia-p-flecha="izq"]');
+  var flDer = raiz.querySelector('[data-gia-p-flecha="der"]');
+  var items = Array.prototype.slice.call(pista.children);
+  var porSet = parseInt(pista.getAttribute('data-gia-p-set-size'), 10) || items.length;
+  var indice = porSet;
+
+  function posDe(i) {
+    var el = items[i];
+    return el.offsetLeft - pista.offsetLeft - (pista.clientWidth - el.clientWidth) / 2;
+  }
+  function irA(i, comportamiento) {
+    if (i < 0 || i >= items.length) return;
+    pista.scrollTo({ left: posDe(i), behavior: comportamiento || 'smooth' });
+  }
+  irA(indice, 'instant');
+
+  var frame = 0, quieto = 0;
+  pista.addEventListener('scroll', function () {
+    cancelAnimationFrame(frame);
+    clearTimeout(quieto);
+    frame = requestAnimationFrame(function () {
+      var centro = pista.scrollLeft + pista.clientWidth / 2, mejor = 0, dist = Infinity;
+      items.forEach(function (el, i) {
+        var c = el.offsetLeft - pista.offsetLeft + el.clientWidth / 2;
+        var d = Math.abs(c - centro);
+        if (d < dist) { dist = d; mejor = i; }
+      });
+      indice = mejor;
+    });
+    quieto = setTimeout(function () {
+      if (indice < porSet || indice >= porSet * 2) {
+        var equivalente = (indice % porSet) + porSet;
+        indice = equivalente;
+        irA(equivalente, 'instant');
+      }
+    }, 120);
+  }, { passive: true });
+
+  flIzq.addEventListener('click', function () { irA(indice - 1); });
+  flDer.addEventListener('click', function () { irA(indice + 1); });
+})();
+</script>

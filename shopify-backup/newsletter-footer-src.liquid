@@ -1,0 +1,97 @@
+{%- comment -%}
+  ==========================================================================
+  GIAPURA - Franja de newsletter para el FOOTER. Guarda el mail en el mismo
+  endpoint publico que ya usa la landing (tabla Fundador, origen "landing"
+  se reusa como "footer" para poder distinguirlos si hace falta).
+  Para pegar en: Personalizar tema > contexto "Footer" (arriba donde dice
+  "Home page", cambiar a Footer) > Agregar seccion > "Liquid personalizado".
+  ==========================================================================
+{%- endcomment -%}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap">
+
+<style>
+  #gia-news * { box-sizing: border-box; }
+  #gia-news {
+    font-family: 'Aileron', 'Helvetica Neue', Arial, sans-serif; background: #240D08; padding: 3rem 1.5rem; text-align: center;
+    width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw);
+  }
+  #gia-news .gia-news-wrap { max-width: 32rem; margin: 0 auto; }
+  #gia-news h2 { font-family: 'Playfair Display', ui-serif, Georgia, serif; margin: 0; font-size: 1.5rem; font-weight: 600; color: #F5EEDF; }
+  #gia-news p.gia-news-sub { margin: .6rem 0 0; font-size: .875rem; line-height: 1.5; color: rgba(245,238,223,.75); }
+  #gia-news form { margin-top: 1.5rem; display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; }
+  #gia-news input[type="email"] {
+    flex: 1 1 14rem; min-width: 0; border-radius: 9999px; border: 1px solid rgba(245,238,223,.25);
+    background: rgba(245,238,223,.06); padding: .8rem 1.25rem; font-size: .9rem; color: #F5EEDF; outline: none;
+  }
+  #gia-news input[type="email"]::placeholder { color: rgba(245,238,223,.45); }
+  #gia-news input[type="email"]:focus { border-color: #F5CF89; }
+  #gia-news button {
+    flex: 0 0 auto; border: none; cursor: pointer; border-radius: 9999px; padding: .8rem 1.5rem;
+    font-size: .9rem; font-weight: 700; background: #F5CF89; color: #4A1C05; transition: background 200ms ease, transform 200ms ease;
+  }
+  #gia-news button:hover { background: #f0c26a; }
+  #gia-news button:active { transform: scale(.96); }
+  #gia-news button[disabled] { opacity: .6; cursor: not-allowed; }
+  #gia-news .gia-news-msg { margin-top: .85rem; font-size: .8rem; min-height: 1.1em; }
+  #gia-news .gia-news-msg[data-tipo="ok"] { color: #F5CF89; }
+  #gia-news .gia-news-msg[data-tipo="error"] { color: #e8a58a; }
+  @media (min-width: 640px) { #gia-news h2 { font-size: 1.875rem; } }
+</style>
+
+<div id="gia-news">
+  <div class="gia-news-wrap">
+    <h2>Sumate a las novedades</h2>
+    <p class="gia-news-sub">Dejanos tu mail para enterarte antes que nadie de la próxima tanda. (Por ahora sin sorpresas, pero seguro las haya).</p>
+    <form data-gia-news-form>
+      <input type="email" name="email" placeholder="tu@mail.com" required aria-label="Tu email">
+      <button type="submit" data-gia-news-btn>Quiero enterarme</button>
+    </form>
+    <p class="gia-news-msg" data-gia-news-msg role="status" aria-live="polite"></p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var form = document.querySelector('[data-gia-news-form]');
+  if (!form) return;
+  var btn = form.querySelector('[data-gia-news-btn]');
+  var msg = document.querySelector('[data-gia-news-msg]');
+  var input = form.querySelector('input[type="email"]');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = (input.value || '').trim();
+    if (!email) return;
+    btn.disabled = true;
+    msg.textContent = '';
+    msg.removeAttribute('data-tipo');
+
+    fetch('https://giapura-erp.vercel.app/api/public/newsletter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (res.ok) {
+          msg.textContent = '¡Listo! Te vamos a avisar apenas haya novedades.';
+          msg.setAttribute('data-tipo', 'ok');
+          input.value = '';
+        } else {
+          msg.textContent = 'Ese mail no parece válido, revisalo e intentá de nuevo.';
+          msg.setAttribute('data-tipo', 'error');
+        }
+      })
+      .catch(function () {
+        msg.textContent = 'Hubo un problema. Probá de nuevo en un rato.';
+        msg.setAttribute('data-tipo', 'error');
+      })
+      .finally(function () {
+        btn.disabled = false;
+      });
+  });
+})();
+</script>

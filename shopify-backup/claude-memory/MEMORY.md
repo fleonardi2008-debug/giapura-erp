@@ -1,0 +1,2 @@
+- [Commits concurrentes en giapura-erp](giapura-repo-concurrent-commits.md) — otro proceso commitea y pushea el working tree solo; no dejes scratch files en la raíz.
+- [Proyecto giapura-club (Club Fundadores)](giapura-club-project.md) — 3er proyecto, página del QR; lee contenido del ERP y se edita desde el backoffice.
