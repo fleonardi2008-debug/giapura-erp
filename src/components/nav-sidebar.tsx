@@ -10,6 +10,7 @@ const links = [
   { href: "/", label: "Inicio" },
   { href: "/plan", label: "Plan de acción" },
   { href: "/insumos", label: "Insumos" },
+  { href: "/compras", label: "Compras" },
   { href: "/skus", label: "Productos (SKU)" },
   { href: "/lotes", label: "Lotes de producción" },
   { href: "/stock", label: "Stock" },

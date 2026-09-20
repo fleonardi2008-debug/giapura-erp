@@ -93,6 +93,7 @@ model User {
   createdAt    DateTime @default(now())
 
   auditLogs         AuditLog[]
+  comprasCreadas    CompraInsumo[]    @relation("CompraCreatedBy")
   gastosCreados     Gasto[]           @relation("GastoCreatedBy")
   movimientosCreados MovimientoStock[] @relation("MovStockCreatedBy")
   enviosActualizados Envio[]          @relation("EnvioActualizadoPor")
@@ -171,6 +172,7 @@ model Insumo {
   activo       Boolean    @default(true)
   createdAt    DateTime   @default(now())
 
+  compras          CompraInsumo[]
   costos           InsumoCosto[]
   recetaItems      RecetaItem[]
   movimientosStock MovimientoStock[]
@@ -231,6 +233,36 @@ model CostoFabricaHistorico {
 
 // ---------- Produccion / stock ----------
 
+enum EstadoCompra {
+  COMPRADO  // pagada / en camino: cuenta como plata gastada, todavía no es stock disponible
+  RECIBIDO  // llegó a la fábrica: suma al stock disponible
+  CANCELADO // no se concretó: no cuenta ni como gasto ni como stock
+}
+
+// Compra de un insumo en dos pasos: comprado -> recibido en fábrica.
+model CompraInsumo {
+  id            String       @id @default(cuid())
+  insumoId      String
+  insumo        Insumo       @relation(fields: [insumoId], references: [id])
+  cantidad      Decimal      @db.Decimal(12, 3)
+  costoUnitario Decimal      @db.Decimal(14, 4)
+  costoTotal    Decimal      @db.Decimal(14, 2)
+  fecha         DateTime
+  estado        EstadoCompra @default(COMPRADO)
+  recibidaAt    DateTime?
+  proveedor     String?
+  nota          String?
+  createdById   String?
+  createdBy     User?        @relation("CompraCreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime     @default(now())
+
+  movimientos MovimientoStock[]
+
+  @@index([estado])
+  @@index([insumoId])
+  @@index([fecha])
+}
+
 model LoteProduccion {
   id                    String     @id @default(cuid())
   skuId                 String
@@ -260,6 +292,8 @@ model MovimientoStock {
   costoUnitarioSnapshot Decimal?            @db.Decimal(14, 4)
   loteProduccionId      String?
   loteProduccion        LoteProduccion?     @relation(fields: [loteProduccionId], references: [id])
+  compraId              String?
+  compra                CompraInsumo?       @relation(fields: [compraId], references: [id])
   pedidoId              String?
   pedido                Pedido?             @relation(fields: [pedidoId], references: [id])
   fecha                 DateTime            @default(now())

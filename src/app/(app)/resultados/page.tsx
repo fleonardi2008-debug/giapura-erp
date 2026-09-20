@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { calcularResultadosMes } from "@/lib/resultados";
+import { calcularComprasMes } from "@/lib/compras";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -22,7 +23,12 @@ export default async function ResultadosPage({
   const anio = params.anio ? parseInt(params.anio, 10) : now.getUTCFullYear();
   const mes = params.mes ? parseInt(params.mes, 10) : now.getUTCMonth() + 1;
 
-  const resultado = await calcularResultadosMes(anio, mes);
+  const [resultado, compras] = await Promise.all([
+    calcularResultadosMes(anio, mes),
+    calcularComprasMes(anio, mes),
+  ]);
+  // Plata que salió de caja en el mes: gastos operativos + compras de insumos.
+  const salidaDeCaja = resultado.gastos.plus(compras.total);
 
   const prev = mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 };
   const next = mes === 12 ? { anio: anio + 1, mes: 1 } : { anio, mes: mes + 1 };
@@ -79,10 +85,37 @@ export default async function ResultadosPage({
         </Card>
       </div>
 
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-normal text-muted-foreground">
+              Compras de insumos (caja)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">
+            {fmt(compras.total)}
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              {fmt(compras.enCamino)} todavía en camino
+            </span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-normal text-muted-foreground">
+              Plata que salió en el mes (gastos + compras)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{fmt(salidaDeCaja)}</CardContent>
+        </Card>
+      </div>
+
       <p className="text-sm text-muted-foreground">
         Ingresos: suma de los pedidos cargados con fecha en el mes. CMV: costo de cada
         unidad vendida al momento de la venta (no cambia si después actualizás costos).
-        Gastos: lo cargado en la sección Gastos con fecha en el mes.
+        Gastos: lo cargado en la sección Gastos con fecha en el mes. Las compras de
+        insumos son plata que sale de caja pero no se restan del margen: su costo ya entra
+        en el CMV cuando vendés el producto, y restarlo también al comprar lo contaría dos
+        veces.
       </p>
     </div>
   );

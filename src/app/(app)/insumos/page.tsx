@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/db";
 import { getCostoInsumoVigente } from "@/lib/costing";
+import { cantidadEnCaminoPorInsumo } from "@/lib/compras";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { NuevoInsumoDialog } from "@/components/insumos/nuevo-insumo-dialog";
 import { ActualizarCostoDialog } from "@/components/insumos/actualizar-costo-dialog";
-import { RegistrarCompraDialog } from "@/components/insumos/registrar-compra-dialog";
+import { NuevaCompraDialog } from "@/components/compras/nueva-compra-dialog";
 import { DesactivarInsumoButton } from "@/components/insumos/desactivar-insumo-button";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -20,7 +21,15 @@ export default async function InsumosPage() {
     include: { stockActual: true },
   });
 
-  const costos = await Promise.all(insumos.map((i) => getCostoInsumoVigente(i.id)));
+  const [costos, enCamino] = await Promise.all([
+    Promise.all(insumos.map((i) => getCostoInsumoVigente(i.id))),
+    cantidadEnCaminoPorInsumo(),
+  ]);
+  const opcionesCompra = insumos.map((i) => ({
+    id: i.id,
+    nombre: i.nombre,
+    unidadMedida: i.unidadMedida,
+  }));
 
   return (
     <div className="space-y-6">
@@ -39,6 +48,7 @@ export default async function InsumosPage() {
             <TableHead>Tipo</TableHead>
             <TableHead>Unidad</TableHead>
             <TableHead>Stock actual</TableHead>
+            <TableHead>En camino</TableHead>
             <TableHead>Stock mínimo</TableHead>
             <TableHead>Costo vigente</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
@@ -64,6 +74,15 @@ export default async function InsumosPage() {
                     </Badge>
                   )}
                 </TableCell>
+                <TableCell>
+                  {enCamino.has(insumo.id) ? (
+                    <span className="text-muted-foreground">
+                      +{enCamino.get(insumo.id)!.toString()} {insumo.unidadMedida}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
                 <TableCell>{insumo.stockMinimo.toString()}</TableCell>
                 <TableCell>
                   {costo ? (
@@ -73,10 +92,10 @@ export default async function InsumosPage() {
                   )}
                 </TableCell>
                 <TableCell className="text-right space-x-2">
-                  <RegistrarCompraDialog
-                    insumoId={insumo.id}
-                    insumoNombre={insumo.nombre}
-                    unidadMedida={insumo.unidadMedida}
+                  <NuevaCompraDialog
+                    insumos={opcionesCompra}
+                    insumoIdFijo={insumo.id}
+                    variant="outline"
                   />
                   <ActualizarCostoDialog insumoId={insumo.id} insumoNombre={insumo.nombre} />
                   <DesactivarInsumoButton insumoId={insumo.id} />
@@ -86,7 +105,7 @@ export default async function InsumosPage() {
           })}
           {insumos.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={8} className="text-center text-muted-foreground">
                 Todavía no cargaste insumos.
               </TableCell>
             </TableRow>

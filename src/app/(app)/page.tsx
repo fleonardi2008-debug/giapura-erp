@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { calcularResultadosMes } from "@/lib/resultados";
 import { calcularCostoUnitario } from "@/lib/costing";
+import { calcularComprasMes } from "@/lib/compras";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -15,8 +16,9 @@ export default async function DashboardPage() {
   const anio = now.getUTCFullYear();
   const mes = now.getUTCMonth() + 1;
 
-  const [resultado, insumosBajoStock, skus, lotesPendientes] = await Promise.all([
+  const [resultado, compras, insumosBajoStock, skus, lotesPendientes] = await Promise.all([
     calcularResultadosMes(anio, mes),
+    calcularComprasMes(anio, mes),
     prisma.insumo.findMany({
       where: { activo: true },
       include: { stockActual: true },
@@ -40,7 +42,13 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-normal text-muted-foreground">Compras de insumos del mes</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">${compras.total.toFixed(2)}</CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-normal text-muted-foreground">Ingresos del mes</CardTitle>
