@@ -13,6 +13,13 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createSku } from "@/lib/actions/skus";
 
 export function NuevoSkuDialog() {
@@ -39,6 +46,22 @@ export function NuevoSkuDialog() {
           <DialogTitle>Nuevo producto (SKU)</DialogTitle>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="nivel">Tipo de producto</Label>
+            <Select name="nivel" defaultValue="FRASCO">
+              <SelectTrigger id="nivel" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="FRASCO">Frasco (individual, se produce)</SelectItem>
+                <SelectItem value="PACK">Pack (combina frascos)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Un frasco lleva receta de insumos. Un pack se arma con frascos (la composición
+              la definís después, en el detalle).
+            </p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="codigo">Código</Label>
             <Input id="codigo" name="codigo" required placeholder="Ej: PM-450" />

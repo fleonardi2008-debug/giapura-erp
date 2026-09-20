@@ -2,7 +2,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { calcularCostoUnitario } from "@/lib/costing";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { NuevoSkuDialog } from "@/components/skus/nuevo-sku-dialog";
+
+const NIVEL_LABEL: Record<string, string> = { FRASCO: "Frasco", PACK: "Pack" };
 
 export default async function SkusPage() {
   const skus = await prisma.sku.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } });
@@ -23,6 +26,7 @@ export default async function SkusPage() {
           <TableRow>
             <TableHead>Código</TableHead>
             <TableHead>Nombre</TableHead>
+            <TableHead>Tipo</TableHead>
             <TableHead>Costo variable</TableHead>
             <TableHead>Precio</TableHead>
             <TableHead>Margen</TableHead>
@@ -36,6 +40,11 @@ export default async function SkusPage() {
               <TableRow key={sku.id}>
                 <TableCell className="font-medium">{sku.codigo}</TableCell>
                 <TableCell>{sku.nombre}</TableCell>
+                <TableCell>
+                  <Badge variant={sku.nivel === "PACK" ? "default" : "secondary"}>
+                    {NIVEL_LABEL[sku.nivel] ?? sku.nivel}
+                  </Badge>
+                </TableCell>
                 <TableCell>
                   ${costo.costoTotal.toFixed(2)}
                   {costo.faltantes.length > 0 && (
@@ -56,7 +65,7 @@ export default async function SkusPage() {
           })}
           {skus.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
+              <TableCell colSpan={7} className="text-center text-muted-foreground">
                 Todavía no cargaste productos.
               </TableCell>
             </TableRow>

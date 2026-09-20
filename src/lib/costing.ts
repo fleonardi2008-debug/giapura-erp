@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma, type NivelSku } from "@/generated/prisma/client";
 
 export async function getCostoInsumoVigente(insumoId: string, fecha: Date = new Date()) {
   return prisma.insumoCosto.findFirst({
@@ -45,15 +45,30 @@ export type DetalleInsumo = {
   subtotal: Prisma.Decimal;
 };
 
+/** Un frasco que compone un pack, con su costo unitario y subtotal. */
+export type DetalleComponente = {
+  componenteId: string;
+  codigo: string;
+  nombre: string;
+  cantidad: number;
+  costoUnitario: Prisma.Decimal;
+  subtotal: Prisma.Decimal;
+};
+
 export type CostoUnitarioBreakdown = {
   skuId: string;
   fecha: Date;
+  nivel: NivelSku;
   detalleInsumos: DetalleInsumo[];
+  /** Frascos que componen el pack (vacío para frascos). */
+  detalleComponentes: DetalleComponente[];
+  /** Suma del costo de los frascos que componen el pack. */
+  costoComponentes: Prisma.Decimal;
   costoInsumosBase: Prisma.Decimal;
   perdidaPct: Prisma.Decimal;
   costoInsumos: Prisma.Decimal;
   costoFabrica: Prisma.Decimal;
-  /** Costo variable/marginal: insumos (con merma) + costo de fábrica. */
+  /** Costo variable/marginal: frascos que lo componen + insumos (con merma) + costo de fábrica. */
   costoTotal: Prisma.Decimal;
   precioVenta: Prisma.Decimal | null;
   gastosGeneralesMensuales: Prisma.Decimal | null;
@@ -80,18 +95,51 @@ export async function calcularCostoUnitario(
   skuId: string,
   fecha: Date = new Date()
 ): Promise<CostoUnitarioBreakdown> {
-  const [sku, receta, costoFabrica] = await Promise.all([
+  const [sku, receta, costoFabrica, composicion] = await Promise.all([
     prisma.sku.findUnique({ where: { id: skuId } }),
     getRecetaVigente(skuId, fecha),
     getCostoFabricaVigente(skuId, fecha),
+    prisma.skuComposicion.findMany({
+      where: { packId: skuId },
+      include: { componente: true },
+    }),
   ]);
 
+  const nivel: NivelSku = sku?.nivel ?? "FRASCO";
+  const esPack = nivel === "PACK";
   const faltantes: string[] = [];
+
+  // Costo de los frascos que componen el pack (recursivo, 1 nivel de profundidad).
+  const detalleComponentes: DetalleComponente[] = [];
+  let costoComponentes = new Prisma.Decimal(0);
+  if (esPack) {
+    if (composicion.length === 0) {
+      faltantes.push("El pack no tiene composición definida (frascos que lo forman).");
+    }
+    for (const comp of composicion) {
+      const costoComp = await calcularCostoUnitario(comp.componenteId, fecha);
+      const subtotal = costoComp.costoTotal.times(comp.cantidad);
+      costoComponentes = costoComponentes.plus(subtotal);
+      detalleComponentes.push({
+        componenteId: comp.componenteId,
+        codigo: comp.componente.codigo,
+        nombre: comp.componente.nombre,
+        cantidad: comp.cantidad,
+        costoUnitario: costoComp.costoTotal,
+        subtotal,
+      });
+      for (const f of costoComp.faltantes) {
+        faltantes.push(`${comp.componente.nombre}: ${f}`);
+      }
+    }
+  }
+
   let costoInsumosBase = new Prisma.Decimal(0);
   const detalleInsumos: DetalleInsumo[] = [];
 
   if (!receta) {
-    faltantes.push("No hay receta vigente para este SKU.");
+    // Un frasco sin receta está incompleto; un pack puede no tener packaging propio cargado.
+    if (!esPack) faltantes.push("No hay receta vigente para este SKU.");
   } else {
     for (const item of receta.items) {
       const costoInsumo = await getCostoInsumoVigente(item.insumoId, fecha);
@@ -122,14 +170,16 @@ export async function calcularCostoUnitario(
     }
   }
 
-  if (!costoFabrica) {
+  // El costo de fábrica es clave para los frascos (los produce la fábrica). En un pack,
+  // el armado puede no tener costo de fábrica cargado, así que no se marca como faltante.
+  if (!costoFabrica && !esPack) {
     faltantes.push("No hay costo de fábrica vigente para este SKU.");
   }
 
   const perdidaPct = sku?.perdidaPct ?? new Prisma.Decimal(0);
   const costoInsumos = costoInsumosBase.times(perdidaPct.dividedBy(100).plus(1));
   const costoFabricaValor = costoFabrica?.costoPorUnidad ?? new Prisma.Decimal(0);
-  const costoTotal = costoInsumos.plus(costoFabricaValor);
+  const costoTotal = costoComponentes.plus(costoInsumos).plus(costoFabricaValor);
 
   const precioVenta = sku?.precioVenta ?? null;
   const gastosGeneralesMensuales = sku?.gastosGeneralesMensuales ?? null;
@@ -152,7 +202,10 @@ export async function calcularCostoUnitario(
   return {
     skuId,
     fecha,
+    nivel,
     detalleInsumos,
+    detalleComponentes,
+    costoComponentes,
     costoInsumosBase,
     perdidaPct,
     costoInsumos,

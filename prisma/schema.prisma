@@ -114,10 +114,16 @@ model AuditLog {
 
 // ---------- Costos ----------
 
+enum NivelSku {
+  FRASCO // producto individual, se produce a partir de insumos (receta)
+  PACK   // se arma combinando frascos (composición) + packaging propio
+}
+
 model Sku {
   id                  String   @id @default(cuid())
   codigo              String   @unique
   nombre              String
+  nivel               NivelSku @default(FRASCO)
   tiendaNubeProductId String?
   tiendaNubeVariantId String?
   unidadMedida        String   @default("unidad")
@@ -137,6 +143,23 @@ model Sku {
   movimientosStock MovimientoStock[]
   stockActual      StockActual?
   pedidoItems      PedidoItem[]
+
+  // Composición: si es PACK, de qué frascos se compone (y en cuántos packs se usa cada frasco).
+  composicion  SkuComposicion[] @relation("PackComposicion")
+  usadoEnPacks SkuComposicion[] @relation("ComponenteDePacks")
+}
+
+// Un ítem de la composición de un PACK: qué frasco lleva y cuántos.
+model SkuComposicion {
+  id           String @id @default(cuid())
+  packId       String
+  pack         Sku    @relation("PackComposicion", fields: [packId], references: [id], onDelete: Cascade)
+  componenteId String
+  componente   Sku    @relation("ComponenteDePacks", fields: [componenteId], references: [id])
+  cantidad     Int
+
+  @@unique([packId, componenteId])
+  @@index([packId])
 }
 
 model Insumo {

@@ -2,12 +2,16 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { calcularCostoUnitario, getCostoFabricaVigente } from "@/lib/costing";
 import { RecetaEditor } from "@/components/skus/receta-editor";
+import { ComposicionEditor } from "@/components/skus/composicion-editor";
 import { ActualizarCostoFabricaDialog } from "@/components/skus/actualizar-costo-fabrica-dialog";
 import { EditarEconomiaDialog } from "@/components/skus/editar-economia-dialog";
 import { EnvioGratisCalculator } from "@/components/skus/envio-gratis-calculator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Prisma } from "@/generated/prisma/client";
+
+const NIVEL_LABEL: Record<string, string> = { FRASCO: "Frasco", PACK: "Pack" };
 
 function fmt(n: { toFixed: (d: number) => string } | null) {
   return n ? `$${n.toFixed(2)}` : "—";
@@ -27,17 +31,34 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
   const sku = await prisma.sku.findUnique({ where: { id } });
   if (!sku) notFound();
 
-  const [insumos, costo, costoFabrica] = await Promise.all([
+  const esPack = sku.nivel === "PACK";
+
+  const [insumos, costo, costoFabrica, frascos, composicion] = await Promise.all([
     prisma.insumo.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
     calcularCostoUnitario(id),
     getCostoFabricaVigente(id),
+    esPack
+      ? prisma.sku.findMany({
+          where: { nivel: "FRASCO", activo: true },
+          orderBy: { nombre: "asc" },
+          select: { id: true, nombre: true },
+        })
+      : Promise.resolve([]),
+    esPack
+      ? prisma.skuComposicion.findMany({ where: { packId: id } })
+      : Promise.resolve([]),
   ]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{sku.nombre}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold">{sku.nombre}</h1>
+            <Badge variant={esPack ? "default" : "secondary"}>
+              {NIVEL_LABEL[sku.nivel] ?? sku.nivel}
+            </Badge>
+          </div>
           <p className="text-muted-foreground">Código {sku.codigo}</p>
         </div>
         <EditarEconomiaDialog
@@ -78,9 +99,62 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
+      {esPack && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Composición del pack (frascos)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {costo.detalleComponentes.length > 0 && (
+              <div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Frasco</TableHead>
+                      <TableHead>Cantidad</TableHead>
+                      <TableHead>Costo unitario</TableHead>
+                      <TableHead>Subtotal</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {costo.detalleComponentes.map((c) => (
+                      <TableRow key={c.componenteId}>
+                        <TableCell className="font-medium">{c.nombre}</TableCell>
+                        <TableCell>{c.cantidad}</TableCell>
+                        <TableCell>${c.costoUnitario.toFixed(2)}</TableCell>
+                        <TableCell>${c.subtotal.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <p className="mt-1 text-right text-sm text-muted-foreground">
+                  Subtotal frascos:{" "}
+                  <span className="font-medium text-foreground">
+                    ${costo.costoComponentes.toFixed(2)}
+                  </span>
+                </p>
+              </div>
+            )}
+            <div>
+              <p className="mb-3 text-sm font-medium text-muted-foreground">
+                Editar composición
+              </p>
+              <ComposicionEditor
+                packId={sku.id}
+                frascos={frascos}
+                initialItems={composicion.map((c) => ({
+                  componenteId: c.componenteId,
+                  cantidad: c.cantidad,
+                }))}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Desglose de insumos</CardTitle>
+          <CardTitle>{esPack ? "Packaging del pack (insumos)" : "Desglose de insumos"}</CardTitle>
         </CardHeader>
         <CardContent>
           {costo.detalleInsumos.length === 0 ? (
@@ -216,7 +290,7 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
 
       <Card>
         <CardHeader>
-          <CardTitle>Receta (BOM)</CardTitle>
+          <CardTitle>{esPack ? "Packaging del pack (caja, etiqueta…)" : "Receta (BOM)"}</CardTitle>
         </CardHeader>
         <CardContent>
           <RecetaEditor

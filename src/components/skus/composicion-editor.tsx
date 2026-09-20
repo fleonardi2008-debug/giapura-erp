@@ -11,58 +11,58 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createReceta } from "@/lib/actions/skus";
+import { setComposicion } from "@/lib/actions/skus";
 
-type Insumo = { id: string; nombre: string; unidadMedida: string };
-type Row = { key: string; insumoId: string; cantidad: string };
+type Frasco = { id: string; nombre: string };
+type Row = { key: string; componenteId: string; cantidad: string };
 
-export function RecetaEditor({
-  skuId,
-  insumos,
+export function ComposicionEditor({
+  packId,
+  frascos,
   initialItems,
 }: {
-  skuId: string;
-  insumos: Insumo[];
-  initialItems: { insumoId: string; cantidadPorUnidad: string }[];
+  packId: string;
+  frascos: Frasco[];
+  initialItems: { componenteId: string; cantidad: number }[];
 }) {
   const [rows, setRows] = useState<Row[]>(
     initialItems.length > 0
       ? initialItems.map((item, i) => ({
-          key: `${i}-${item.insumoId}`,
-          insumoId: item.insumoId,
-          cantidad: item.cantidadPorUnidad,
+          key: `${i}-${item.componenteId}`,
+          componenteId: item.componenteId,
+          cantidad: String(item.cantidad),
         }))
-      : [{ key: "0", insumoId: "", cantidad: "" }]
+      : [{ key: "0", componenteId: "", cantidad: "1" }]
   );
   const [pending, startTransition] = useTransition();
 
   function addRow() {
-    setRows((r) => [...r, { key: `${Date.now()}`, insumoId: "", cantidad: "" }]);
+    setRows((r) => [...r, { key: `${Date.now()}`, componenteId: "", cantidad: "1" }]);
   }
 
   function removeRow(key: string) {
     setRows((r) => r.filter((row) => row.key !== key));
   }
 
-  function updateRow(key: string, field: "insumoId" | "cantidad", value: string | null) {
+  function updateRow(key: string, field: "componenteId" | "cantidad", value: string | null) {
     setRows((r) => r.map((row) => (row.key === key ? { ...row, [field]: value ?? "" } : row)));
   }
 
   function handleSave() {
     const formData = new FormData();
     for (const row of rows) {
-      if (!row.insumoId || !row.cantidad) continue;
-      formData.append("insumoId", row.insumoId);
-      formData.append("cantidadPorUnidad", row.cantidad);
+      if (!row.componenteId || !row.cantidad) continue;
+      formData.append("componenteId", row.componenteId);
+      formData.append("cantidad", row.cantidad);
     }
 
     startTransition(async () => {
-      const result = await createReceta(skuId, formData);
+      const result = await setComposicion(packId, formData);
       if (result?.error) {
         toast.error(result.error);
         return;
       }
-      toast.success("Receta guardada como nueva versión");
+      toast.success("Composición guardada");
     });
   }
 
@@ -70,42 +70,49 @@ export function RecetaEditor({
     <div className="space-y-3">
       {rows.map((row) => (
         <div key={row.key} className="flex items-center gap-2">
-          <Select value={row.insumoId} onValueChange={(v) => updateRow(row.key, "insumoId", v)}>
+          <Select
+            value={row.componenteId}
+            onValueChange={(v) => updateRow(row.key, "componenteId", v)}
+          >
             <SelectTrigger className="w-64">
-              <SelectValue placeholder="Insumo">
-                {(value) => insumos.find((i) => i.id === value)?.nombre ?? "Insumo"}
+              <SelectValue placeholder="Frasco">
+                {(value) => frascos.find((f) => f.id === value)?.nombre ?? "Frasco"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {insumos.map((insumo) => (
-                <SelectItem key={insumo.id} value={insumo.id}>
-                  {insumo.nombre}
+              {frascos.map((frasco) => (
+                <SelectItem key={frasco.id} value={frasco.id}>
+                  {frasco.nombre}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Input
             type="number"
-            step="0.0001"
-            placeholder="Cantidad por unidad"
-            className="w-40"
+            min="1"
+            step="1"
+            placeholder="Cantidad"
+            className="w-32"
             value={row.cantidad}
             onChange={(e) => updateRow(row.key, "cantidad", e.target.value)}
           />
-          <span className="text-sm text-muted-foreground">
-            {insumos.find((i) => i.id === row.insumoId)?.unidadMedida}
-          </span>
+          <span className="text-sm text-muted-foreground">frascos por pack</span>
           <Button variant="ghost" size="sm" onClick={() => removeRow(row.key)}>
             Quitar
           </Button>
         </div>
       ))}
+      {frascos.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          Todavía no hay frascos cargados. Creá primero los frascos y después armá el pack.
+        </p>
+      )}
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={addRow} type="button">
-          Agregar insumo
+          Agregar frasco
         </Button>
         <Button size="sm" onClick={handleSave} disabled={pending} type="button">
-          {pending ? "Guardando..." : "Guardar receta (nueva versión)"}
+          {pending ? "Guardando..." : "Guardar composición"}
         </Button>
       </div>
     </div>
