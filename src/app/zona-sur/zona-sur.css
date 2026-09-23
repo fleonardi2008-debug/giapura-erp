@@ -1,0 +1,43 @@
+/* Paleta de Giapura, la misma que en la tienda (giapura.com.ar), aplicada
+   solo dentro de .gia-zona-sur para no tocar el resto del panel de admin.
+   Reutiliza las variables de shadcn/ui: los componentes de siempre (Button,
+   Input, Card, Select...) heredan estos colores solos. */
+.gia-zona-sur {
+  --background: #ece1cc;
+  --foreground: #240d08;
+  --card: #f5eedf;
+  --card-foreground: #240d08;
+  --popover: #f5eedf;
+  --popover-foreground: #240d08;
+  --primary: #4a1c05;
+  --primary-foreground: #f5eedf;
+  --secondary: #f5eedf;
+  --secondary-foreground: #4a1c05;
+  --muted: #e6d7ac;
+  --muted-foreground: #6d2900;
+  --accent: #f5cf89;
+  --accent-foreground: #240d08;
+  --destructive: #b3261e;
+  --border: #d8c6a0;
+  --input: #d8c6a0;
+  --ring: #6d2900;
+  --radius: 0.9rem;
+
+  background: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
+}
+
+.gia-zona-sur h1,
+.gia-zona-sur h2,
+.gia-zona-sur h3 {
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
+}
+
+.gia-zona-sur .gia-mano {
+  font-family: var(--font-nanum-pen), "Segoe Script", cursive;
+}
+
+.gia-zona-sur [data-slot="button"].bg-primary:hover {
+  background: #351203;
+}

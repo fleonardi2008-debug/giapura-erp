@@ -148,6 +148,8 @@ model Sku {
   // Composición: si es PACK, de qué frascos se compone (y en cuántos packs se usa cada frasco).
   composicion  SkuComposicion[] @relation("PackComposicion")
   usadoEnPacks SkuComposicion[] @relation("ComponenteDePacks")
+
+  zonaSurPedidoItems ZonaSurPedidoItem[]
 }
 
 // Un ítem de la composición de un PACK: qué frasco lleva y cuántos.
@@ -527,4 +529,79 @@ model Fundador {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Zona Sur: pedidos manuales (envío por radio en mapa, o retiro en un punto de
+// encuentro) con pago por transferencia o efectivo. Separado del modelo
+// Pedido (ese está enganchado a Tienda Nube y a la contabilidad).
+// ---------------------------------------------------------------------------
+
+enum ZonaSurMetodoEntrega {
+  ENVIO_ZONA
+  PUNTO_QUILMES
+  PUNTO_BERNAL
+}
+
+enum ZonaSurMetodoPago {
+  TRANSFERENCIA
+  EFECTIVO
+}
+
+enum ZonaSurEstado {
+  PENDIENTE
+  CONFIRMADO
+  ENTREGADO
+  CANCELADO
+}
+
+// Config de una fila única ("singleton"), editable desde el panel: zona de
+// envío (centro + radio en km), precio, datos de transferencia y el punto de
+// encuentro vigente de cada lugar (texto libre, se actualiza semana a semana).
+model ZonaSurConfig {
+  id                String   @id @default("singleton")
+  zonaNombre        String   @default("Zona Sur")
+  zonaCentroLat     Float    @default(-34.7206)
+  zonaCentroLng     Float    @default(-58.2681)
+  zonaRadioKm       Float    @default(5)
+  zonaPrecio        Decimal  @default(0) @db.Decimal(14, 2)
+  cbuAlias          String?
+  titularCuenta     String?
+  puntoQuilmesTexto String? // ej: "Jueves 25/9, 18 a 20hs, Rivadavia y Alsina"
+  puntoBernalTexto  String?
+  updatedAt         DateTime @updatedAt
+}
+
+model ZonaSurPedido {
+  id             String               @id @default(cuid())
+  clienteNombre  String
+  clienteEmail   String
+  clienteTelefono String
+  metodoEntrega  ZonaSurMetodoEntrega
+  direccion      String? // solo si metodoEntrega = ENVIO_ZONA
+  puntoElegido   String? // copia del texto del punto vigente al momento del pedido
+  metodoPago     ZonaSurMetodoPago
+  comprobanteUrl String? // solo si metodoPago = TRANSFERENCIA
+  total          Decimal              @db.Decimal(14, 2)
+  estado         ZonaSurEstado        @default(PENDIENTE)
+  nota           String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  items ZonaSurPedidoItem[]
+
+  @@index([createdAt])
+  @@index([estado])
+}
+
+model ZonaSurPedidoItem {
+  id        String        @id @default(cuid())
+  pedidoId  String
+  pedido    ZonaSurPedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  skuId     String?
+  sku       Sku?          @relation(fields: [skuId], references: [id])
+  nombre    String // copia del nombre por si el SKU cambia despues
+  cantidad  Int
+  precioUnitario Decimal  @db.Decimal(14, 2)
+  subtotal  Decimal       @db.Decimal(14, 2)
 }
