@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/session";
+import { requireOwnerSession } from "@/lib/session";
 import { registrarVentaItem } from "@/lib/ventas";
 
 const itemSchema = z.object({
@@ -20,8 +20,8 @@ const crearPedidoSchema = z.object({
 });
 
 export async function createPedidoManual(formData: FormData) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   const parsedPedido = crearPedidoSchema.safeParse({
     numeroPedido: formData.get("numeroPedido"),
@@ -101,8 +101,8 @@ export async function createPedidoManual(formData: FormData) {
 }
 
 export async function deletePedido(pedidoId: string) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return;
 
   const pedido = await prisma.pedido.findUnique({
     where: { id: pedidoId },

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/session";
+import { getSession, requireOwnerSession } from "@/lib/session";
 import { Prisma } from "@/generated/prisma/client";
 
 const crearCompraSchema = z.object({
@@ -24,8 +24,9 @@ function revalidarCompras() {
 }
 
 export async function crearCompra(formData: FormData) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  // Decidir gastar plata es del dueño; la fábrica solo confirma cuando el material llega.
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   const parsed = crearCompraSchema.safeParse({
     insumoId: formData.get("insumoId"),
@@ -66,8 +67,9 @@ export async function crearCompra(formData: FormData) {
 }
 
 export async function marcarCompraRecibida(compraId: string) {
+  // La confirma quien reciba el material: dueño u operador de fábrica.
   const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  if (!session) return { error: "No autenticado" };
 
   const compra = await prisma.compraInsumo.findUnique({ where: { id: compraId } });
   if (!compra) return { error: "Compra no encontrada" };
@@ -137,8 +139,8 @@ export async function marcarCompraRecibida(compraId: string) {
 }
 
 export async function cancelarCompra(compraId: string) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   // Solo se puede cancelar lo que todavía no llegó: si ya es stock, corresponde un ajuste.
   const { count } = await prisma.compraInsumo.updateMany({

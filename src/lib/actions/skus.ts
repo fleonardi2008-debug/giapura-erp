@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/session";
+import { requireOwnerSession } from "@/lib/session";
 
 const crearSkuSchema = z.object({
   codigo: z.string().min(1, "Requerido"),
@@ -13,8 +13,8 @@ const crearSkuSchema = z.object({
 });
 
 export async function createSku(formData: FormData) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   const parsed = crearSkuSchema.safeParse({
     codigo: formData.get("codigo"),
@@ -44,8 +44,8 @@ const composicionItemSchema = z.object({
 });
 
 export async function setComposicion(packId: string, formData: FormData) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   const pack = await prisma.sku.findUnique({ where: { id: packId } });
   if (!pack) return { error: "Producto no encontrado" };
@@ -101,8 +101,8 @@ const recetaItemSchema = z.object({
 });
 
 export async function createReceta(skuId: string, formData: FormData) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   const insumoIds = formData.getAll("insumoId") as string[];
   const cantidades = formData.getAll("cantidadPorUnidad") as string[];
@@ -174,8 +174,8 @@ const economiaSchema = z.object({
 });
 
 export async function updateSkuEconomia(formData: FormData) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   const parsed = economiaSchema.safeParse({
     skuId: formData.get("skuId"),
@@ -207,8 +207,8 @@ const costoFabricaSchema = z.object({
 });
 
 export async function addCostoFabrica(formData: FormData) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   const parsed = costoFabricaSchema.safeParse({
     skuId: formData.get("skuId"),

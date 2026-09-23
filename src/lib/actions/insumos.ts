@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/session";
+import { requireOwnerSession } from "@/lib/session";
 
 const crearInsumoSchema = z.object({
   nombre: z.string().min(1, "Requerido"),
@@ -14,8 +14,8 @@ const crearInsumoSchema = z.object({
 });
 
 export async function createInsumo(formData: FormData) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   const parsed = crearInsumoSchema.safeParse({
     nombre: formData.get("nombre"),
@@ -63,8 +63,8 @@ const actualizarCostoSchema = z.object({
 });
 
 export async function addInsumoCosto(formData: FormData) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   const parsed = actualizarCostoSchema.safeParse({
     insumoId: formData.get("insumoId"),
@@ -96,8 +96,8 @@ export async function addInsumoCosto(formData: FormData) {
 }
 
 export async function toggleInsumoActivo(insumoId: string, activo: boolean) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return;
 
   await prisma.insumo.update({ where: { id: insumoId }, data: { activo } });
   revalidatePath("/insumos");

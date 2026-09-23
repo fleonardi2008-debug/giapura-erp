@@ -6,11 +6,12 @@ import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const links = [
+const linksDueno = [
   { href: "/", label: "Inicio" },
   { href: "/plan", label: "Plan de acción" },
   { href: "/insumos", label: "Insumos" },
   { href: "/compras", label: "Compras" },
+  { href: "/produccion", label: "Producción" },
   { href: "/skus", label: "Productos (SKU)" },
   { href: "/lotes", label: "Lotes de producción" },
   { href: "/stock", label: "Stock" },
@@ -20,10 +21,15 @@ const links = [
   { href: "/resultados", label: "Estado de resultados" },
   { href: "/club", label: "Club Fundadores" },
   { href: "/integraciones", label: "Integraciones" },
+  { href: "/usuarios", label: "Usuarios" },
 ];
+
+// El operador de fábrica entra con un login propio y limitado: solo ve esta pantalla.
+const linksFabrica = [{ href: "/produccion", label: "Producción" }];
 
 export function NavSidebar({ userName, role }: { userName: string; role: string }) {
   const pathname = usePathname();
+  const links = role === "OWNER" ? linksDueno : linksFabrica;
 
   return (
     <aside className="flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar">

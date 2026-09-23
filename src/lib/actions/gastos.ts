@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/session";
+import { requireOwnerSession } from "@/lib/session";
 
 const crearGastoSchema = z.object({
   categoria: z.enum([
@@ -21,8 +21,8 @@ const crearGastoSchema = z.object({
 });
 
 export async function createGasto(formData: FormData) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
 
   const parsed = crearGastoSchema.safeParse({
     categoria: formData.get("categoria"),
@@ -47,8 +47,8 @@ export async function createGasto(formData: FormData) {
 }
 
 export async function deleteGasto(gastoId: string) {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
+  const session = await requireOwnerSession();
+  if (!session) return;
 
   await prisma.gasto.delete({ where: { id: gastoId } });
   revalidatePath("/gastos");
