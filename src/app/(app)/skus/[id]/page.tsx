@@ -5,6 +5,7 @@ import { RecetaEditor } from "@/components/skus/receta-editor";
 import { ComposicionEditor } from "@/components/skus/composicion-editor";
 import { ActualizarCostoFabricaDialog } from "@/components/skus/actualizar-costo-fabrica-dialog";
 import { EditarEconomiaDialog } from "@/components/skus/editar-economia-dialog";
+import { EditarImagenDialog } from "@/components/skus/editar-imagen-dialog";
 import { EnvioGratisCalculator } from "@/components/skus/envio-gratis-calculator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,13 +62,16 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
           </div>
           <p className="text-muted-foreground">Código {sku.codigo}</p>
         </div>
-        <EditarEconomiaDialog
-          skuId={sku.id}
-          precioVenta={sku.precioVenta?.toString() ?? null}
-          perdidaPct={sku.perdidaPct.toString()}
-          gastosGeneralesMensuales={sku.gastosGeneralesMensuales?.toString() ?? null}
-          produccionMensualEstimada={sku.produccionMensualEstimada}
-        />
+        <div className="flex gap-2">
+          <EditarImagenDialog skuId={sku.id} imagenUrl={sku.imagenUrl} />
+          <EditarEconomiaDialog
+            skuId={sku.id}
+            precioVenta={sku.precioVenta?.toString() ?? null}
+            perdidaPct={sku.perdidaPct.toString()}
+            gastosGeneralesMensuales={sku.gastosGeneralesMensuales?.toString() ?? null}
+            produccionMensualEstimada={sku.produccionMensualEstimada}
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

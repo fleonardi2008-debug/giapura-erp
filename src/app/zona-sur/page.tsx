@@ -13,6 +13,7 @@ export default async function ZonaSurPage() {
     prisma.sku.findMany({
       where: { activo: true, precioVenta: { not: null } },
       orderBy: { nombre: "asc" },
+      select: { id: true, nombre: true, precioVenta: true, imagenUrl: true },
     }),
   ]);
 
@@ -30,7 +31,12 @@ export default async function ZonaSurPage() {
           puntoQuilmesTexto: config.puntoQuilmesTexto,
           puntoBernalTexto: config.puntoBernalTexto,
         }}
-        skus={skus.map((s) => ({ id: s.id, nombre: s.nombre, precioVenta: Number(s.precioVenta) }))}
+        skus={skus.map((s) => ({
+          id: s.id,
+          nombre: s.nombre,
+          precioVenta: Number(s.precioVenta),
+          imagenUrl: s.imagenUrl,
+        }))}
       />
     </div>
   );
