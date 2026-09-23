@@ -15,6 +15,7 @@ const links = [
   { href: "/lotes", label: "Lotes de producción" },
   { href: "/stock", label: "Stock" },
   { href: "/pedidos", label: "Pedidos" },
+  { href: "/pedidos-zona-sur", label: "Pedidos Zona Sur" },
   { href: "/gastos", label: "Gastos" },
   { href: "/resultados", label: "Estado de resultados" },
   { href: "/club", label: "Club Fundadores" },
