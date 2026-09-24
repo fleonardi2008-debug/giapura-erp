@@ -5,6 +5,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TransferirDialog } from "@/components/mi-zona/transferir-dialog";
 import { AjustarZonaDialog } from "@/components/mi-zona/ajustar-zona-dialog";
+import { VenderZonaDialog } from "@/components/mi-zona/vender-zona-dialog";
 
 export default async function MiZonaPage() {
   const session = await getSession();
@@ -18,6 +19,7 @@ export default async function MiZonaPage() {
       id: true,
       nombre: true,
       nivel: true,
+      precioVenta: true,
       stockActual: { select: { cantidadActual: true, costoPromedioPonderado: true } },
       stockZona: { select: { cantidadActual: true } },
     },
@@ -32,6 +34,7 @@ export default async function MiZonaPage() {
       nombre: p.nombre,
       fabrica: fabrica.toString(),
       zona,
+      precioVenta: p.precioVenta?.toString() ?? null,
       valorZona: costo ? costo.times(zona).toFixed(2) : null,
     };
   });
@@ -71,7 +74,13 @@ export default async function MiZonaPage() {
               <TableCell className="font-medium">{f.nombre}</TableCell>
               <TableCell className="text-muted-foreground">{f.fabrica}</TableCell>
               <TableCell className="font-semibold">{f.zona}</TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right space-x-2">
+                <VenderZonaDialog
+                  skuId={f.id}
+                  skuNombre={f.nombre}
+                  stockZona={f.zona}
+                  precioSugerido={f.precioVenta}
+                />
                 <AjustarZonaDialog skuId={f.id} skuNombre={f.nombre} stockActual={String(f.zona)} />
               </TableCell>
             </TableRow>
