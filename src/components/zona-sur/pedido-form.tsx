@@ -123,8 +123,8 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
   return (
     <form action={handleSubmit} className="mx-auto max-w-2xl space-y-8 px-6 py-12">
       <header className="text-center">
-        <p className="gia-mano text-2xl text-[var(--muted-foreground)]">Pedidos</p>
-        <h1 className="text-4xl font-semibold">{config.zonaNombre}</h1>
+        <h1 className="text-5xl font-semibold tracking-tight">Giapura</h1>
+        <p className="gia-mano mt-1 text-2xl text-[var(--muted-foreground)]">Pedidos Zona Sur</p>
         <p className="mt-2 text-[var(--muted-foreground)]">
           Elegí tu pack, cómo lo recibís y cómo pagás. Coordinamos el resto por WhatsApp.
         </p>

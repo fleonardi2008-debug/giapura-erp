@@ -27,8 +27,9 @@ export const config = {
   // api/webhooks y api/cron quedan fuera del login: los llama Tienda Nube y Vercel Cron,
   // no un usuario con sesión. Cada uno valida su propia autenticidad (firma HMAC y
   // CRON_SECRET respectivamente). api/public es de lectura y lo consume la landing
-  // (otro dominio), así que tampoco pasa por login.
+  // (otro dominio), así que tampoco pasa por login. zona-sur es la página pública
+  // donde un cliente (sin cuenta del ERP) hace su pedido, así que tampoco pasa por login.
   matcher: [
-    "/((?!api/auth|api/webhooks|api/cron|api/public|login|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api/auth|api/webhooks|api/cron|api/public|zona-sur|login|_next/static|_next/image|favicon.ico).*)",
   ],
 };
