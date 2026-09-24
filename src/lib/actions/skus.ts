@@ -171,6 +171,7 @@ const economiaSchema = z.object({
   perdidaPct: z.coerce.number().min(0).max(100).default(0),
   gastosGeneralesMensuales: z.coerce.number().min(0).optional(),
   produccionMensualEstimada: z.coerce.number().int().positive().optional(),
+  stockMinimo: z.coerce.number().int().min(0).optional(),
 });
 
 export async function updateSkuEconomia(formData: FormData) {
@@ -183,6 +184,7 @@ export async function updateSkuEconomia(formData: FormData) {
     perdidaPct: formData.get("perdidaPct") || 0,
     gastosGeneralesMensuales: formData.get("gastosGeneralesMensuales") || undefined,
     produccionMensualEstimada: formData.get("produccionMensualEstimada") || undefined,
+    stockMinimo: formData.get("stockMinimo") || undefined,
   });
 
   if (!parsed.success) {

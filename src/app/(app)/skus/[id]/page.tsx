@@ -67,6 +67,7 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
           perdidaPct={sku.perdidaPct.toString()}
           gastosGeneralesMensuales={sku.gastosGeneralesMensuales?.toString() ?? null}
           produccionMensualEstimada={sku.produccionMensualEstimada}
+          stockMinimo={sku.stockMinimo}
         />
       </div>
 

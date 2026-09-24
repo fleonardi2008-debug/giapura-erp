@@ -20,12 +20,14 @@ export function EditarEconomiaDialog({
   perdidaPct,
   gastosGeneralesMensuales,
   produccionMensualEstimada,
+  stockMinimo,
 }: {
   skuId: string;
   precioVenta: string | null;
   perdidaPct: string;
   gastosGeneralesMensuales: string | null;
   produccionMensualEstimada: number | null;
+  stockMinimo: number | null;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -96,6 +98,18 @@ export function EditarEconomiaDialog({
                 defaultValue={produccionMensualEstimada ?? ""}
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="stockMinimo">Stock mínimo (fábrica + mi zona)</Label>
+            <Input
+              id="stockMinimo"
+              name="stockMinimo"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="Unidades antes de avisar que hay que reponer"
+              defaultValue={stockMinimo ?? ""}
+            />
           </div>
           <DialogFooter>
             <Button type="submit" disabled={pending}>

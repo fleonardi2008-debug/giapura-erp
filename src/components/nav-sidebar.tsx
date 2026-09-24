@@ -12,6 +12,8 @@ const linksDueno = [
   { href: "/insumos", label: "Insumos" },
   { href: "/compras", label: "Compras" },
   { href: "/produccion", label: "Producción" },
+  { href: "/mi-zona", label: "Mi zona" },
+  { href: "/reposicion", label: "Reposición" },
   { href: "/skus", label: "Productos (SKU)" },
   { href: "/lotes", label: "Lotes de producción" },
   { href: "/stock", label: "Stock" },

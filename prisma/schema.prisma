@@ -33,6 +33,7 @@ enum TipoMovimientoStock {
   VENTA
   AJUSTE
   DEVOLUCION
+  TRANSFERENCIA_ZONA // sale del stock de fábrica/depósito hacia "mi zona"
 }
 
 enum EstadoLote {
@@ -138,11 +139,16 @@ model Sku {
   gastosGeneralesMensuales  Decimal? @db.Decimal(14, 2)
   produccionMensualEstimada Int?
 
+  // Stock mínimo total (fábrica + mi zona) antes de avisar que hay que reponer.
+  // Null = sin alerta configurada. Solo tiene sentido para frascos y packs.
+  stockMinimo Int?
+
   recetas          Receta[]
   costosFabrica    CostoFabricaHistorico[]
   lotes            LoteProduccion[]
   movimientosStock MovimientoStock[]
   stockActual      StockActual?
+  stockZona        StockZona?
   pedidoItems      PedidoItem[]
 
   // Composición: si es PACK, de qué frascos se compone (y en cuántos packs se usa cada frasco).
@@ -319,6 +325,17 @@ model StockActual {
   cantidadActual         Decimal       @default(0) @db.Decimal(12, 3)
   costoPromedioPonderado Decimal?      @db.Decimal(14, 4)
   actualizadoEn          DateTime      @updatedAt
+}
+
+// Stock de frascos/packs que el dueño se llevó a su zona para vender aparte del
+// depósito nacional (StockActual arriba). Solo existe para SKU, nunca para insumos:
+// la materia prima se queda toda en la fábrica.
+model StockZona {
+  id             String   @id @default(cuid())
+  skuId          String   @unique
+  sku            Sku      @relation(fields: [skuId], references: [id])
+  cantidadActual Int      @default(0)
+  actualizadoEn  DateTime @updatedAt
 }
 
 // ---------- Ventas / gastos / envios ----------

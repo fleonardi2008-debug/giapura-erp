@@ -77,8 +77,11 @@ export default async function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex items-center justify-between">
             <CardTitle>Alertas de stock bajo</CardTitle>
+            <Link href="/reposicion" className="text-xs text-muted-foreground hover:underline">
+              Ver reposición →
+            </Link>
           </CardHeader>
           <CardContent className="space-y-2">
             {alertasStock.length === 0 && (
