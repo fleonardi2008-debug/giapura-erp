@@ -11,7 +11,8 @@ export default async function ZonaSurPage() {
       update: {},
     }),
     prisma.sku.findMany({
-      where: { activo: true, precioVenta: { not: null } },
+      // Acá solo se venden packs, nunca frascos sueltos.
+      where: { activo: true, nivel: "PACK", precioVenta: { not: null } },
       orderBy: { nombre: "asc" },
     }),
   ]);
