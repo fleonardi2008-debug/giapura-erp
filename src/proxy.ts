@@ -29,7 +29,9 @@ export const config = {
   // CRON_SECRET respectivamente). api/public es de lectura y lo consume la landing
   // (otro dominio), así que tampoco pasa por login. zona-sur es la página pública
   // donde un cliente (sin cuenta del ERP) hace su pedido, así que tampoco pasa por login.
+  // branding son archivos estáticos (logo, etc.) que esa misma página pública necesita
+  // poder cargar sin sesión.
   matcher: [
-    "/((?!api/auth|api/webhooks|api/cron|api/public|zona-sur|login|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api/auth|api/webhooks|api/cron|api/public|zona-sur|branding|login|_next/static|_next/image|favicon.ico).*)",
   ],
 };
