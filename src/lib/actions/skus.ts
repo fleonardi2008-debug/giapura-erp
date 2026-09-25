@@ -240,3 +240,29 @@ export async function addCostoFabrica(formData: FormData) {
   revalidatePath("/skus");
   return { success: true };
 }
+
+const imagenSchema = z.object({
+  skuId: z.string().min(1),
+  imagenUrl: z.string().url("Tiene que ser un link válido (https://...)").optional().or(z.literal("")),
+});
+
+export async function updateSkuImagen(formData: FormData) {
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
+
+  const parsed = imagenSchema.safeParse({
+    skuId: formData.get("skuId"),
+    imagenUrl: formData.get("imagenUrl") || "",
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  const { skuId, imagenUrl } = parsed.data;
+  await prisma.sku.update({ where: { id: skuId }, data: { imagenUrl: imagenUrl || null } });
+
+  revalidatePath(`/skus/${skuId}`);
+  revalidatePath("/zona-sur");
+  return { success: true };
+}

@@ -14,7 +14,7 @@ const MapaZona = dynamic(() => import("./mapa-zona").then((m) => m.MapaZona), {
   loading: () => <div className="h-64 animate-pulse rounded-xl bg-muted" />,
 });
 
-type Sku = { id: string; nombre: string; precioVenta: number };
+type Sku = { id: string; nombre: string; precioVenta: number; imagenUrl: string | null };
 type Config = {
   zonaNombre: string;
   zonaCentroLat: number;
@@ -132,29 +132,51 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
 
       {/* Productos */}
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">1. Elegí tu pack</h2>
+        <p className="text-center text-sm font-semibold tracking-wide text-[var(--muted-foreground)] uppercase">
+          1. Elegí tu pack
+        </p>
+        <h2 className="text-center text-3xl">Dos frascos, tu combinación</h2>
         {skus.length === 0 && (
           <p className="text-sm text-[var(--muted-foreground)]">
             Todavía no hay productos cargados. (Se cargan en Productos (SKU) del panel.)
           </p>
         )}
-        {skus.map((sku) => (
-          <div key={sku.id} className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 py-3">
-            <div>
-              <p className="font-medium">{sku.nombre}</p>
-              <p className="text-sm text-[var(--muted-foreground)]">{moneyAR(sku.precioVenta)}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button type="button" variant="outline" size="icon-sm" onClick={() => cambiarCantidad(sku.id, -1)}>
-                −
-              </Button>
-              <span className="w-4 text-center font-medium">{cantidades[sku.id] ?? 0}</span>
-              <Button type="button" variant="outline" size="icon-sm" onClick={() => cambiarCantidad(sku.id, 1)}>
-                +
-              </Button>
-            </div>
-          </div>
-        ))}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {skus.map((sku) => {
+            const cantidad = cantidades[sku.id] ?? 0;
+            return (
+              <div
+                key={sku.id}
+                className={cn(
+                  "flex flex-col gap-3 rounded-2xl border-2 bg-[var(--card)] p-4 text-center transition-colors",
+                  cantidad > 0 ? "border-[var(--primary)]" : "border-[var(--border)]"
+                )}
+              >
+                <div className="relative aspect-square overflow-hidden rounded-xl bg-[var(--muted)]">
+                  {sku.imagenUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={sku.imagenUrl} alt={sku.nombre} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[var(--muted-foreground)]">
+                      giapura.
+                    </div>
+                  )}
+                </div>
+                <h3 className="text-xl font-semibold">{sku.nombre}</h3>
+                <p className="text-lg font-semibold">{moneyAR(sku.precioVenta)}</p>
+                <div className="mt-auto flex items-center justify-center gap-4">
+                  <Button type="button" variant="outline" size="icon-sm" onClick={() => cambiarCantidad(sku.id, -1)}>
+                    −
+                  </Button>
+                  <span className="w-4 text-center font-medium">{cantidad}</span>
+                  <Button type="button" variant="outline" size="icon-sm" onClick={() => cambiarCantidad(sku.id, 1)}>
+                    +
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       {/* Entrega */}

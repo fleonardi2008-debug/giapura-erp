@@ -132,6 +132,10 @@ model Sku {
   activo              Boolean  @default(true)
   createdAt           DateTime @default(now())
 
+  // Para mostrarlo en paginas de venta propias (ej: /zona-sur). No se usa
+  // para nada de costos/contabilidad.
+  imagenUrl String?
+
   // Economía unitaria: precio de venta, merma y prorrateo de gastos fijos
   // para calcular contribución marginal y punto de equilibrio.
   precioVenta               Decimal? @db.Decimal(14, 2)
