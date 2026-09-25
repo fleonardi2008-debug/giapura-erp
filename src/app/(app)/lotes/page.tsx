@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { NuevoLoteDialog } from "@/components/lotes/nuevo-lote-dialog";
 import { MarcarRecibidoButton } from "@/components/lotes/marcar-recibido-button";
+import { EliminarLoteButton } from "@/components/lotes/eliminar-lote-button";
 
 const ESTADO_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
   PLANIFICADO: "outline",
@@ -56,8 +57,9 @@ export default async function LotesPage() {
               <TableCell>
                 <Badge variant={ESTADO_VARIANT[lote.estado]}>{lote.estado}</Badge>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right space-x-2">
                 {lote.estado !== "RECIBIDO" && <MarcarRecibidoButton loteId={lote.id} />}
+                <EliminarLoteButton loteId={lote.id} recibido={lote.estado === "RECIBIDO"} />
               </TableCell>
             </TableRow>
           ))}

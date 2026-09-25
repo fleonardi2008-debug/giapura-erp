@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/session";
+import { getSession, requireOwnerSession } from "@/lib/session";
 import { calcularCostoUnitario, getRecetaVigente } from "@/lib/costing";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -135,5 +135,49 @@ export async function marcarLoteRecibido(loteId: string) {
 
   revalidatePath("/lotes");
   revalidatePath("/stock");
+  return { success: true };
+}
+
+/**
+ * Borra un lote (frasco producido o pack armado) del historial. Si ya estaba RECIBIDO
+ * —es decir, ya sumó stock y descontó insumos/frascos—, revierte cada movimiento antes
+ * de borrarlo: a un movimiento con cantidad negativa (consumo) se le resta esa misma
+ * cantidad negativa, lo que en la práctica se lo devuelve al stock; a uno positivo
+ * (ingreso) se le resta esa cantidad, lo que lo saca. Una sola resta sirve para los dos
+ * casos porque el signo ya viene cargado en el movimiento.
+ */
+export async function eliminarLote(loteId: string) {
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
+
+  const lote = await prisma.loteProduccion.findUnique({
+    where: { id: loteId },
+    include: { movimientos: true },
+  });
+  if (!lote) return { error: "Lote no encontrado" };
+
+  await prisma.$transaction(async (tx) => {
+    for (const mov of lote.movimientos) {
+      if (mov.tipoItem === "INSUMO" && mov.insumoId) {
+        await tx.stockActual.update({
+          where: { insumoId: mov.insumoId },
+          data: { cantidadActual: { decrement: mov.cantidad } },
+        });
+      } else if (mov.tipoItem === "PRODUCTO_TERMINADO" && mov.skuId) {
+        await tx.stockActual.update({
+          where: { skuId: mov.skuId },
+          data: { cantidadActual: { decrement: mov.cantidad } },
+        });
+      }
+    }
+    await tx.movimientoStock.deleteMany({ where: { loteProduccionId: loteId } });
+    await tx.loteProduccion.delete({ where: { id: loteId } });
+  });
+
+  revalidatePath("/lotes");
+  revalidatePath("/produccion");
+  revalidatePath("/stock");
+  revalidatePath("/mi-zona");
+  revalidatePath("/reposicion");
   return { success: true };
 }
