@@ -6,6 +6,8 @@ import { ComposicionEditor } from "@/components/skus/composicion-editor";
 import { ActualizarCostoFabricaDialog } from "@/components/skus/actualizar-costo-fabrica-dialog";
 import { EditarEconomiaDialog } from "@/components/skus/editar-economia-dialog";
 import { EditarImagenDialog } from "@/components/skus/editar-imagen-dialog";
+import { EditarSkuDialog } from "@/components/skus/editar-sku-dialog";
+import { ToggleSkuActivoButton } from "@/components/skus/toggle-sku-activo-button";
 import { EnvioGratisCalculator } from "@/components/skus/envio-gratis-calculator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,7 +77,13 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
           </div>
           <p className="text-muted-foreground">Código {sku.codigo}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <EditarSkuDialog
+            skuId={sku.id}
+            codigo={sku.codigo}
+            nombre={sku.nombre}
+            unidadMedida={sku.unidadMedida}
+          />
           <EditarImagenDialog skuId={sku.id} imagenUrl={sku.imagenUrl} />
           <EditarEconomiaDialog
             skuId={sku.id}
@@ -88,6 +96,7 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
             precioVentaMayorista={sku.precioVentaMayorista?.toString() ?? null}
             costoReferenciaOnline={sku.costoReferenciaOnline?.toString() ?? null}
           />
+          <ToggleSkuActivoButton skuId={sku.id} activo={sku.activo} />
         </div>
       </div>
 

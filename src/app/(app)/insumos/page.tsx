@@ -5,8 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { NuevoInsumoDialog } from "@/components/insumos/nuevo-insumo-dialog";
 import { ActualizarCostoDialog } from "@/components/insumos/actualizar-costo-dialog";
+import { EditarInsumoDialog } from "@/components/insumos/editar-insumo-dialog";
+import { AjustarStockInsumoDialog } from "@/components/insumos/ajustar-stock-insumo-dialog";
 import { NuevaCompraDialog } from "@/components/compras/nueva-compra-dialog";
-import { DesactivarInsumoButton } from "@/components/insumos/desactivar-insumo-button";
+import { ToggleInsumoActivoButton } from "@/components/insumos/toggle-insumo-activo-button";
 
 const TIPO_LABEL: Record<string, string> = {
   INGREDIENTE: "Ingrediente",
@@ -15,11 +17,12 @@ const TIPO_LABEL: Record<string, string> = {
 };
 
 export default async function InsumosPage() {
-  const insumos = await prisma.insumo.findMany({
-    where: { activo: true },
+  const todos = await prisma.insumo.findMany({
     orderBy: { nombre: "asc" },
     include: { stockActual: true },
   });
+  const insumos = todos.filter((i) => i.activo);
+  const desactivados = todos.filter((i) => !i.activo);
 
   const [costos, enCamino] = await Promise.all([
     Promise.all(insumos.map((i) => getCostoInsumoVigente(i.id))),
@@ -91,14 +94,27 @@ export default async function InsumosPage() {
                     <span className="text-muted-foreground">Sin costo cargado</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right space-x-2">
+                <TableCell className="text-right space-x-2 whitespace-nowrap">
                   <NuevaCompraDialog
                     insumos={opcionesCompra}
                     insumoIdFijo={insumo.id}
                     variant="outline"
                   />
+                  <AjustarStockInsumoDialog
+                    insumoId={insumo.id}
+                    insumoNombre={insumo.nombre}
+                    unidadMedida={insumo.unidadMedida}
+                    stockActual={insumo.stockActual?.cantidadActual.toString() ?? "0"}
+                  />
                   <ActualizarCostoDialog insumoId={insumo.id} insumoNombre={insumo.nombre} />
-                  <DesactivarInsumoButton insumoId={insumo.id} />
+                  <EditarInsumoDialog
+                    insumoId={insumo.id}
+                    nombre={insumo.nombre}
+                    tipo={insumo.tipo}
+                    unidadMedida={insumo.unidadMedida}
+                    stockMinimo={insumo.stockMinimo.toString()}
+                  />
+                  <ToggleInsumoActivoButton insumoId={insumo.id} activo={true} />
                 </TableCell>
               </TableRow>
             );
@@ -112,6 +128,26 @@ export default async function InsumosPage() {
           )}
         </TableBody>
       </Table>
+
+      {desactivados.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Desactivados</h2>
+          <Table>
+            <TableBody>
+              {desactivados.map((insumo) => (
+                <TableRow key={insumo.id} className="opacity-60">
+                  <TableCell className="font-medium">{insumo.nombre}</TableCell>
+                  <TableCell>{TIPO_LABEL[insumo.tipo]}</TableCell>
+                  <TableCell>{insumo.unidadMedida}</TableCell>
+                  <TableCell className="text-right">
+                    <ToggleInsumoActivoButton insumoId={insumo.id} activo={false} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

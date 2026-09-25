@@ -38,6 +38,58 @@ export async function createSku(formData: FormData) {
   return { success: true };
 }
 
+export async function toggleSkuActivo(skuId: string, activo: boolean) {
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
+
+  await prisma.sku.update({ where: { id: skuId }, data: { activo } });
+  revalidatePath("/skus");
+  revalidatePath(`/skus/${skuId}`);
+  revalidatePath("/zona-sur");
+  revalidatePath("/produccion");
+  revalidatePath("/mi-zona");
+  revalidatePath("/reposicion");
+  return { success: true };
+}
+
+const editarSkuSchema = z.object({
+  skuId: z.string().min(1),
+  codigo: z.string().min(1, "Requerido"),
+  nombre: z.string().min(1, "Requerido"),
+  unidadMedida: z.string().min(1, "Requerido"),
+});
+
+/** Edita los datos básicos de un producto (código, nombre, unidad). No toca nivel,
+ * costos, receta ni composición: eso se edita desde sus propias secciones. */
+export async function editarSku(formData: FormData) {
+  const session = await requireOwnerSession();
+  if (!session) return { error: "No autorizado" };
+
+  const parsed = editarSkuSchema.safeParse({
+    skuId: formData.get("skuId"),
+    codigo: formData.get("codigo"),
+    nombre: formData.get("nombre"),
+    unidadMedida: formData.get("unidadMedida"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  const { skuId, ...data } = parsed.data;
+
+  try {
+    await prisma.sku.update({ where: { id: skuId }, data });
+  } catch {
+    return { error: "Ya existe otro producto con ese código." };
+  }
+
+  revalidatePath("/skus");
+  revalidatePath(`/skus/${skuId}`);
+  revalidatePath("/zona-sur");
+  return { success: true };
+}
+
 const composicionItemSchema = z.object({
   componenteId: z.string().min(1),
   cantidad: z.coerce.number().int().positive(),

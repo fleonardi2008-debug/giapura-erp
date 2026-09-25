@@ -4,11 +4,14 @@ import { calcularCostoUnitario } from "@/lib/costing";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { NuevoSkuDialog } from "@/components/skus/nuevo-sku-dialog";
+import { ToggleSkuActivoButton } from "@/components/skus/toggle-sku-activo-button";
 
 const NIVEL_LABEL: Record<string, string> = { FRASCO: "Frasco", PACK: "Pack" };
 
 export default async function SkusPage() {
-  const skus = await prisma.sku.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } });
+  const todos = await prisma.sku.findMany({ orderBy: { nombre: "asc" } });
+  const skus = todos.filter((s) => s.activo);
+  const desactivados = todos.filter((s) => !s.activo);
   const costos = await Promise.all(skus.map((s) => calcularCostoUnitario(s.id)));
 
   return (
@@ -30,7 +33,7 @@ export default async function SkusPage() {
             <TableHead>Costo variable</TableHead>
             <TableHead>Precio</TableHead>
             <TableHead>Margen</TableHead>
-            <TableHead />
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -55,10 +58,11 @@ export default async function SkusPage() {
                 <TableCell className="font-semibold">
                   {costo.margenUnitario ? `$${costo.margenUnitario.toFixed(2)}` : "—"}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right space-x-2 whitespace-nowrap">
                   <Link href={`/skus/${sku.id}`} className="text-sm underline">
                     Ver detalle
                   </Link>
+                  <ToggleSkuActivoButton skuId={sku.id} activo={true} />
                 </TableCell>
               </TableRow>
             );
@@ -72,6 +76,28 @@ export default async function SkusPage() {
           )}
         </TableBody>
       </Table>
+
+      {desactivados.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Desactivados</h2>
+          <Table>
+            <TableBody>
+              {desactivados.map((sku) => (
+                <TableRow key={sku.id} className="opacity-60">
+                  <TableCell className="font-medium">{sku.codigo}</TableCell>
+                  <TableCell>{sku.nombre}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{NIVEL_LABEL[sku.nivel] ?? sku.nivel}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <ToggleSkuActivoButton skuId={sku.id} activo={false} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }
