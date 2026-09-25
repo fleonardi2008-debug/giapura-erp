@@ -16,18 +16,25 @@ import { updateSkuEconomia } from "@/lib/actions/skus";
 
 export function EditarEconomiaDialog({
   skuId,
+  esFrasco,
   precioVenta,
   perdidaPct,
   gastosGeneralesMensuales,
   produccionMensualEstimada,
   stockMinimo,
+  precioVentaMayorista,
+  costoReferenciaOnline,
 }: {
   skuId: string;
+  /** Un pack solo tiene un canal de venta; un frasco puede venderse mayorista y online. */
+  esFrasco: boolean;
   precioVenta: string | null;
   perdidaPct: string;
   gastosGeneralesMensuales: string | null;
   produccionMensualEstimada: number | null;
   stockMinimo: number | null;
+  precioVentaMayorista: string | null;
+  costoReferenciaOnline: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -56,7 +63,9 @@ export function EditarEconomiaDialog({
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="precioVenta">Precio de venta</Label>
+            <Label htmlFor="precioVenta">
+              {esFrasco ? "Precio de venta — tienda online" : "Precio de venta"}
+            </Label>
             <Input
               id="precioVenta"
               name="precioVenta"
@@ -65,6 +74,41 @@ export function EditarEconomiaDialog({
               defaultValue={precioVenta ?? ""}
             />
           </div>
+          {esFrasco && (
+            <div className="grid grid-cols-2 gap-4 rounded-md border border-border p-3">
+              <div className="col-span-2 -mt-1 text-xs font-medium text-muted-foreground">
+                Otros canales de venta
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="precioVentaMayorista">Precio — tienda física (mayorista)</Label>
+                <Input
+                  id="precioVentaMayorista"
+                  name="precioVentaMayorista"
+                  type="number"
+                  step="0.01"
+                  placeholder="Lo que le cobrás al distribuidor"
+                  defaultValue={precioVentaMayorista ?? ""}
+                />
+                <p className="text-xs text-muted-foreground">
+                  El costo usa el mismo costo del frasco (sin packaging de combo).
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="costoReferenciaOnline">Costo de referencia — tienda online</Label>
+                <Input
+                  id="costoReferenciaOnline"
+                  name="costoReferenciaOnline"
+                  type="number"
+                  step="0.01"
+                  placeholder="Si lleva packaging que la receta no contempla"
+                  defaultValue={costoReferenciaOnline ?? ""}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Opcional. Si lo dejás vacío, se usa el costo normal del producto.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="perdidaPct">% pérdida / merma sobre insumos</Label>
             <Input

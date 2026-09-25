@@ -137,11 +137,21 @@ model Sku {
   imagenUrl String?
 
   // Economía unitaria: precio de venta, merma y prorrateo de gastos fijos
-  // para calcular contribución marginal y punto de equilibrio.
+  // para calcular contribución marginal y punto de equilibrio. Para un frasco,
+  // precioVenta es el precio de venta ONLINE (directo al consumidor); un pack
+  // solo tiene este canal, así que acá significa simplemente "el precio".
   precioVenta               Decimal? @db.Decimal(14, 2)
   perdidaPct                Decimal  @default(0) @db.Decimal(5, 2)
   gastosGeneralesMensuales  Decimal? @db.Decimal(14, 2)
   produccionMensualEstimada Int?
+
+  // Venta mayorista (tienda física, a través de un distribuidor): precio propio,
+  // el costo usa el mismo costoTotal calculado (sin packaging de envío/combo).
+  precioVentaMayorista Decimal? @db.Decimal(14, 2)
+  // Costo de referencia del canal online cuando incluye packaging que el costeo
+  // normal no contempla (ej: va en la caja combo aunque se venda un solo frasco).
+  // Es un número fijo que se carga a mano, no se recalcula con la receta.
+  costoReferenciaOnline Decimal? @db.Decimal(14, 2)
 
   // Stock mínimo total (fábrica + mi zona) antes de avisar que hay que reponer.
   // Null = sin alerta configurada. Solo tiene sentido para frascos y packs.

@@ -172,6 +172,8 @@ const economiaSchema = z.object({
   gastosGeneralesMensuales: z.coerce.number().min(0).optional(),
   produccionMensualEstimada: z.coerce.number().int().positive().optional(),
   stockMinimo: z.coerce.number().int().min(0).optional(),
+  precioVentaMayorista: z.coerce.number().positive().optional(),
+  costoReferenciaOnline: z.coerce.number().positive().optional(),
 });
 
 export async function updateSkuEconomia(formData: FormData) {
@@ -185,6 +187,8 @@ export async function updateSkuEconomia(formData: FormData) {
     gastosGeneralesMensuales: formData.get("gastosGeneralesMensuales") || undefined,
     produccionMensualEstimada: formData.get("produccionMensualEstimada") || undefined,
     stockMinimo: formData.get("stockMinimo") || undefined,
+    precioVentaMayorista: formData.get("precioVentaMayorista") || undefined,
+    costoReferenciaOnline: formData.get("costoReferenciaOnline") || undefined,
   });
 
   if (!parsed.success) {

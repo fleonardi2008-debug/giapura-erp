@@ -50,6 +50,19 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
       : Promise.resolve([]),
   ]);
 
+  // Si el frasco tiene un costo de referencia distinto para su canal online
+  // (precioVenta = precio online), el margen sale de ESE costo, no del costo base,
+  // para no mostrar un número más lindo del real. Comparte esto "Economía unitaria"
+  // y la calculadora de envío gratis.
+  const costoBaseOnline = sku.costoReferenciaOnline ?? costo.costoTotal;
+  const costoUnitarioCompletoOnline = costoBaseOnline.plus(costo.gastoGeneralPorUnidad);
+  const margenUnitarioOnline = costo.precioVenta ? costo.precioVenta.minus(costoUnitarioCompletoOnline) : null;
+  const contribucionMarginalOnline = costo.precioVenta ? costo.precioVenta.minus(costoBaseOnline) : null;
+  const puntoEquilibrioOnline =
+    costo.gastosGeneralesMensuales && contribucionMarginalOnline && contribucionMarginalOnline.greaterThan(0)
+      ? costo.gastosGeneralesMensuales.dividedBy(contribucionMarginalOnline)
+      : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -66,11 +79,14 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
           <EditarImagenDialog skuId={sku.id} imagenUrl={sku.imagenUrl} />
           <EditarEconomiaDialog
             skuId={sku.id}
+            esFrasco={!esPack}
             precioVenta={sku.precioVenta?.toString() ?? null}
             perdidaPct={sku.perdidaPct.toString()}
             gastosGeneralesMensuales={sku.gastosGeneralesMensuales?.toString() ?? null}
             produccionMensualEstimada={sku.produccionMensualEstimada}
             stockMinimo={sku.stockMinimo}
+            precioVentaMayorista={sku.precioVentaMayorista?.toString() ?? null}
+            costoReferenciaOnline={sku.costoReferenciaOnline?.toString() ?? null}
           />
         </div>
       </div>
@@ -239,25 +255,29 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Costo unitario completo</p>
-              <p className="text-xl font-semibold">${costo.costoUnitarioCompleto.toFixed(2)}</p>
+              <p className="text-xl font-semibold">${costoUnitarioCompletoOnline.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Margen unitario</p>
-              <p className="text-xl font-semibold">{fmt(costo.margenUnitario)}</p>
+              <p className="text-xl font-semibold">{fmt(margenUnitarioOnline)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Contribución marginal</p>
-              <p className="text-xl font-semibold">{fmt(costo.contribucionMarginal)}</p>
+              <p className="text-xl font-semibold">{fmt(contribucionMarginalOnline)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Punto de equilibrio</p>
               <p className="text-xl font-semibold">
-                {costo.puntoEquilibrioUnidades
-                  ? `${costo.puntoEquilibrioUnidades.toFixed(0)} unidades/mes`
-                  : "—"}
+                {puntoEquilibrioOnline ? `${puntoEquilibrioOnline.toFixed(0)} unidades/mes` : "—"}
               </p>
             </div>
           </div>
+          {sku.costoReferenciaOnline && (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Usa el costo de referencia del canal online (${sku.costoReferenciaOnline.toFixed(2)}), no
+              el costo base del producto.
+            </p>
+          )}
           {!costo.precioVenta && (
             <p className="mt-4 text-sm text-muted-foreground">
               Cargá un precio de venta en &quot;Editar economía&quot; para ver margen, contribución
@@ -267,13 +287,76 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
         </CardContent>
       </Card>
 
+      {!esPack && (sku.precioVentaMayorista || sku.costoReferenciaOnline) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Venta por canal</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Canal</TableHead>
+                  <TableHead>Precio</TableHead>
+                  <TableHead>Costo</TableHead>
+                  <TableHead>Margen</TableHead>
+                  <TableHead>Margen %</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium">Tienda online (directo)</TableCell>
+                  <TableCell>{fmt(costo.precioVenta)}</TableCell>
+                  <TableCell>
+                    {fmt(sku.costoReferenciaOnline ?? costo.costoTotal)}
+                    {!sku.costoReferenciaOnline && (
+                      <span className="ml-1 text-xs text-muted-foreground">(normal)</span>
+                    )}
+                  </TableCell>
+                  {(() => {
+                    const costoOnline = sku.costoReferenciaOnline ?? costo.costoTotal;
+                    const margen = costo.precioVenta ? costo.precioVenta.minus(costoOnline) : null;
+                    const margenPct = margen && costo.precioVenta ? margen.dividedBy(costo.precioVenta).times(100) : null;
+                    return (
+                      <>
+                        <TableCell>{fmt(margen)}</TableCell>
+                        <TableCell>{margenPct ? `${margenPct.toFixed(1)}%` : "—"}</TableCell>
+                      </>
+                    );
+                  })()}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Tienda física (mayorista)</TableCell>
+                  <TableCell>{fmt(sku.precioVentaMayorista)}</TableCell>
+                  <TableCell>{fmt(costo.costoTotal)}</TableCell>
+                  {(() => {
+                    const margen = sku.precioVentaMayorista ? sku.precioVentaMayorista.minus(costo.costoTotal) : null;
+                    const margenPct = margen && sku.precioVentaMayorista ? margen.dividedBy(sku.precioVentaMayorista).times(100) : null;
+                    return (
+                      <>
+                        <TableCell>{fmt(margen)}</TableCell>
+                        <TableCell>{margenPct ? `${margenPct.toFixed(1)}%` : "—"}</TableCell>
+                      </>
+                    );
+                  })()}
+                </TableRow>
+              </TableBody>
+            </Table>
+            <p className="mt-3 text-xs text-muted-foreground">
+              La tienda física vende a un distribuidor, que le agrega su propio margen hasta
+              llegar al consumidor. Cargá cada precio desde &quot;Editar economía&quot;.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Envío gratis a partir de...</CardTitle>
         </CardHeader>
         <CardContent>
           <EnvioGratisCalculator
-            contribucionMarginal={costo.contribucionMarginal ? costo.contribucionMarginal.toNumber() : null}
+            contribucionMarginal={contribucionMarginalOnline ? contribucionMarginalOnline.toNumber() : null}
             precioVenta={costo.precioVenta ? costo.precioVenta.toNumber() : null}
           />
         </CardContent>
