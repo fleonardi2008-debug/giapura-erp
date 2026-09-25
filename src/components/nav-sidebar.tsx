@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 
 const linksDueno = [
   { href: "/", label: "Inicio" },
-  { href: "/plan", label: "Plan de acción" },
   { href: "/insumos", label: "Insumos" },
   { href: "/compras", label: "Compras" },
   { href: "/produccion", label: "Producción" },
