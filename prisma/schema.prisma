@@ -357,6 +357,7 @@ model StockZona {
 model Pedido {
   id                       String       @id @default(cuid())
   tiendaNubeOrderId        String?      @unique
+  shopifyOrderId           String?      @unique
   numeroPedido             String
   fecha                    DateTime
   clienteNombre            String?
