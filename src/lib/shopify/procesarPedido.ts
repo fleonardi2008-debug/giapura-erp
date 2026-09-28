@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { registrarVentaItem } from "@/lib/ventas";
+import { registrarVentaItem, revertirVentaItem } from "@/lib/ventas";
 
 type ShopifyLineItem = {
   sku: string | null;
@@ -127,4 +127,103 @@ export async function procesarOrdenShopify(
   });
 
   return { pedidoId: pedido.id, creado: true };
+}
+
+type ShopifyOrderCancelado = { id: number };
+
+/**
+ * Reversa el stock de un pedido cancelado en Shopify (webhook "orders/cancelled").
+ * Idempotente: si el pedido no existe (nunca matcheó ningún SKU) o ya está
+ * CANCELADO, no hace nada.
+ */
+export async function procesarCancelacionShopify(orden: ShopifyOrderCancelado): Promise<void> {
+  const shopifyOrderId = String(orden.id);
+
+  const pedido = await prisma.pedido.findUnique({
+    where: { shopifyOrderId },
+    include: { items: true },
+  });
+
+  if (!pedido) {
+    console.warn(`Cancelación Shopify ${orden.id}: no se encontró el pedido, se ignora.`);
+    return;
+  }
+  if (pedido.estadoPedido === "CANCELADO") return;
+
+  await prisma.$transaction(async (tx) => {
+    for (const item of pedido.items) {
+      if (!item.skuId) continue;
+      await revertirVentaItem(tx, {
+        pedidoId: pedido.id,
+        skuId: item.skuId,
+        cantidad: Number(item.cantidad),
+        fecha: new Date(),
+        nota: `Cancelación Shopify pedido ${orden.id}`,
+      });
+    }
+
+    await tx.pedido.update({
+      where: { id: pedido.id },
+      data: { estadoPedido: "CANCELADO" },
+    });
+  });
+}
+
+type ShopifyRefund = {
+  id: number;
+  order_id: number;
+  created_at: string;
+  refund_line_items?: {
+    quantity: number;
+    line_item?: { sku: string | null } | null;
+  }[];
+};
+
+/**
+ * Repone el stock de los items reembolsados en Shopify (webhook "refunds/create").
+ * Un pedido puede tener varios reembolsos parciales; cada uno se identifica por su
+ * propio id de Shopify para no reprocesarlo si el webhook se reintenta.
+ */
+export async function procesarReembolsoShopify(refund: ShopifyRefund): Promise<void> {
+  const shopifyOrderId = String(refund.order_id);
+  const notaReembolso = `Reembolso Shopify #${refund.id} (pedido ${refund.order_id})`;
+
+  const pedido = await prisma.pedido.findUnique({ where: { shopifyOrderId } });
+  if (!pedido) {
+    console.warn(`Reembolso Shopify ${refund.id}: no se encontró el pedido, se ignora.`);
+    return;
+  }
+
+  const yaProcesado = await prisma.movimientoStock.findFirst({
+    where: { pedidoId: pedido.id, nota: notaReembolso },
+  });
+  if (yaProcesado) return;
+
+  const itemsResueltos: { skuId: string; cantidad: number }[] = [];
+  for (const item of refund.refund_line_items ?? []) {
+    const codigo = item.line_item?.sku;
+    if (!codigo) continue;
+    const sku = await prisma.sku.findUnique({ where: { codigo } });
+    if (!sku) continue;
+    itemsResueltos.push({ skuId: sku.id, cantidad: Number(item.quantity) });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const item of itemsResueltos) {
+      await revertirVentaItem(tx, {
+        pedidoId: pedido.id,
+        skuId: item.skuId,
+        cantidad: item.cantidad,
+        fecha: new Date(refund.created_at),
+        nota: notaReembolso,
+      });
+    }
+
+    // Mismo criterio que Tienda Nube: tanto el reembolso total como el parcial
+    // quedan como REEMBOLSADO (no hay un estado intermedio en el modelo actual).
+    await tx.pedido.update({
+      where: { id: pedido.id },
+      data: { estadoPago: "REEMBOLSADO" },
+    });
+  });
 }

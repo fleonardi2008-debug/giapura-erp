@@ -36,3 +36,41 @@ export async function registrarVentaItem(
     data: { cantidadActual: { decrement: params.cantidad } },
   });
 }
+
+/**
+ * Reversa una venta (cancelación o reembolso): repone el stock del producto
+ * terminado y deja un movimiento DEVOLUCION con nota para trazabilidad.
+ */
+export async function revertirVentaItem(
+  tx: Prisma.TransactionClient,
+  params: {
+    pedidoId: string;
+    skuId: string;
+    cantidad: number;
+    fecha: Date;
+    nota: string;
+    createdById?: string;
+  }
+) {
+  const stockActual = await tx.stockActual.findUnique({ where: { skuId: params.skuId } });
+  const costoSnapshot = stockActual?.costoPromedioPonderado ?? new Prisma.Decimal(0);
+
+  await tx.movimientoStock.create({
+    data: {
+      tipoItem: "PRODUCTO_TERMINADO",
+      skuId: params.skuId,
+      tipoMovimiento: "DEVOLUCION",
+      cantidad: new Prisma.Decimal(params.cantidad),
+      costoUnitarioSnapshot: costoSnapshot,
+      pedidoId: params.pedidoId,
+      fecha: params.fecha,
+      nota: params.nota,
+      createdById: params.createdById,
+    },
+  });
+
+  await tx.stockActual.update({
+    where: { skuId: params.skuId },
+    data: { cantidadActual: { increment: params.cantidad } },
+  });
+}

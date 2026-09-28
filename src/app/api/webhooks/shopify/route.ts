@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/db";
-import { procesarOrdenShopify } from "@/lib/shopify/procesarPedido";
+import {
+  procesarOrdenShopify,
+  procesarCancelacionShopify,
+  procesarReembolsoShopify,
+} from "@/lib/shopify/procesarPedido";
 
 /**
  * Shopify firma el body crudo con HMAC-SHA256 y el secreto de firma de webhooks
@@ -43,8 +47,12 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    if (topic.startsWith("orders/") && payload.id) {
+    if (topic === "orders/create" && payload.id) {
       await procesarOrdenShopify(payload);
+    } else if (topic === "orders/cancelled" && payload.id) {
+      await procesarCancelacionShopify(payload);
+    } else if (topic === "refunds/create" && payload.id) {
+      await procesarReembolsoShopify(payload);
     }
     await prisma.webhookEvent.update({ where: { id: evento.id }, data: { procesado: true } });
   } catch (error) {
