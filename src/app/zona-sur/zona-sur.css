@@ -38,6 +38,11 @@
   font-family: var(--font-nanum-pen), "Segoe Script", cursive;
 }
 
+.gia-zona-sur .gia-pack-nombre {
+  font-family: "Aileron", ui-sans-serif, sans-serif;
+  font-weight: 700;
+}
+
 .gia-zona-sur [data-slot="button"].bg-primary:hover {
   background: #351203;
 }

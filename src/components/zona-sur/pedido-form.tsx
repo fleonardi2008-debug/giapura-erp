@@ -166,7 +166,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
                     </div>
                   )}
                 </div>
-                <h3 className="text-xl font-semibold">{sku.nombre}</h3>
+                <h3 className="gia-pack-nombre text-xl">{sku.nombre}</h3>
                 <p className="text-lg font-semibold">{moneyAR(sku.precioVenta)}</p>
                 <div className="mt-auto flex items-center justify-center gap-4">
                   <Button type="button" variant="outline" size="icon-sm" onClick={() => cambiarCantidad(sku.id, -1)}>

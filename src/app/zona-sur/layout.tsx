@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Nanum_Pen_Script } from "next/font/google";
+import "@fontsource/aileron/700.css";
 import "./zona-sur.css";
 
 export const metadata: Metadata = {
