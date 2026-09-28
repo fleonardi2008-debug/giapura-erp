@@ -86,6 +86,12 @@ export default async function PedidosZonaSurPage() {
                       Ver comprobante
                     </a>
                   )}
+                  {pedido.pagaCon != null && (
+                    <div className="text-xs text-muted-foreground">
+                      Paga con ${Number(pedido.pagaCon).toLocaleString("es-AR")} — vuelto $
+                      {(Number(pedido.pagaCon) - Number(pedido.total)).toLocaleString("es-AR")}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="whitespace-nowrap font-medium">
                   ${Number(pedido.total).toLocaleString("es-AR")}

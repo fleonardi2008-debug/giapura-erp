@@ -595,6 +595,7 @@ model ZonaSurPedido {
   puntoElegido   String? // copia del texto del punto vigente al momento del pedido
   metodoPago     ZonaSurMetodoPago
   comprobanteUrl String? // solo si metodoPago = TRANSFERENCIA
+  pagaCon        Decimal?             @db.Decimal(14, 2) // solo si metodoPago = EFECTIVO, para saber cuánto vuelto llevar
   total          Decimal              @db.Decimal(14, 2)
   estado         ZonaSurEstado        @default(PENDIENTE)
   nota           String?

@@ -234,6 +234,22 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
           </TarjetaOpcion>
         </div>
 
+        {metodoPago === "EFECTIVO" && (
+          <div className="space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+            <Label htmlFor="pagaCon">¿Con cuánto pagás?</Label>
+            <Input
+              id="pagaCon"
+              name="pagaCon"
+              type="number"
+              min={totalConEnvio}
+              step="1"
+              placeholder={`Ej: ${Math.ceil(totalConEnvio / 1000) * 1000}`}
+              required
+            />
+            <p className="text-xs text-[var(--muted-foreground)]">Así llevamos el vuelto justo.</p>
+          </div>
+        )}
+
         {metodoPago === "TRANSFERENCIA" && (
           <div className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
             {config.cbuAlias ? (

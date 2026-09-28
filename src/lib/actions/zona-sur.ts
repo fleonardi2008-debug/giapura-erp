@@ -85,6 +85,7 @@ const pedidoPublicoSchema = z.object({
   metodoEntrega: z.nativeEnum(ZonaSurMetodoEntrega),
   direccion: z.string().optional(),
   metodoPago: z.nativeEnum(ZonaSurMetodoPago),
+  pagaCon: z.coerce.number().optional(),
   items: z.string().transform((v, ctx) => {
     try {
       const parsed = JSON.parse(v);
@@ -104,6 +105,7 @@ export async function crearZonaSurPedido(formData: FormData) {
     metodoEntrega: formData.get("metodoEntrega"),
     direccion: formData.get("direccion") ?? "",
     metodoPago: formData.get("metodoPago"),
+    pagaCon: formData.get("pagaCon") || undefined,
     items: formData.get("items"),
   });
 
@@ -159,6 +161,10 @@ export async function crearZonaSurPedido(formData: FormData) {
   let total = itemsParaCrear.reduce((acc, i) => acc + i.subtotal, 0);
   if (data.metodoEntrega === "ENVIO_ZONA") total += Number(config.zonaPrecio);
 
+  if (data.metodoPago === "EFECTIVO" && (!data.pagaCon || data.pagaCon < total)) {
+    return { error: "Falta indicar con cuánto pagás (tiene que ser al menos el total)" };
+  }
+
   let comprobanteUrl: string | null = null;
   if (comprobante instanceof File && comprobante.size > 0) {
     const subido = await put(`zona-sur/comprobantes/${Date.now()}-${comprobante.name}`, comprobante, {
@@ -178,6 +184,7 @@ export async function crearZonaSurPedido(formData: FormData) {
       puntoElegido,
       metodoPago: data.metodoPago,
       comprobanteUrl,
+      pagaCon: data.metodoPago === "EFECTIVO" ? data.pagaCon : null,
       total,
       items: { create: itemsParaCrear },
     },
