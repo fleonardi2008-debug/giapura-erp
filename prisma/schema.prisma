@@ -530,6 +530,8 @@ model ClubConfig {
   introTitulo   String   @default("Qué es este acceso")
   introTexto    String?
   novedadesTexto String?
+  feedbackTexto String? // bajada del bloque de feedback
+  feedbackUrl   String? // link al formulario largo (Google Forms, Tally, etc.)
   footerTexto   String   @default("Gracias por haber estado desde el principio. — Fran")
   updatedAt     DateTime @updatedAt
 }

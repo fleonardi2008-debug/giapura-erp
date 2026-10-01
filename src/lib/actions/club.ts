@@ -20,6 +20,8 @@ const configSchema = z.object({
   introTitulo: z.string().min(1, "Requerido"),
   introTexto: z.string().optional(),
   novedadesTexto: z.string().optional(),
+  feedbackTexto: z.string().optional(),
+  feedbackUrl: z.string().url("URL inválida").optional().or(z.literal("")),
   footerTexto: z.string().min(1, "Requerido"),
 });
 
@@ -33,6 +35,8 @@ export async function guardarClubConfig(formData: FormData) {
     introTitulo: formData.get("introTitulo"),
     introTexto: formData.get("introTexto") ?? "",
     novedadesTexto: formData.get("novedadesTexto") ?? "",
+    feedbackTexto: formData.get("feedbackTexto") ?? "",
+    feedbackUrl: formData.get("feedbackUrl") ?? "",
     footerTexto: formData.get("footerTexto"),
   });
 
@@ -43,6 +47,7 @@ export async function guardarClubConfig(formData: FormData) {
   const data = {
     ...parsed.data,
     heroVideoUrl: parsed.data.heroVideoUrl || null,
+    feedbackUrl: parsed.data.feedbackUrl || null,
   };
 
   await prisma.clubConfig.upsert({

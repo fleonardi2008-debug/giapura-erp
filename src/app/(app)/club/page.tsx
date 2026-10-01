@@ -21,6 +21,8 @@ export default async function ClubPage() {
     introTitulo: config?.introTitulo ?? "Qué es este acceso",
     introTexto: config?.introTexto ?? null,
     novedadesTexto: config?.novedadesTexto ?? null,
+    feedbackTexto: config?.feedbackTexto ?? null,
+    feedbackUrl: config?.feedbackUrl ?? null,
     footerTexto: config?.footerTexto ?? "Gracias por haber estado desde el principio. — Fran",
   };
 

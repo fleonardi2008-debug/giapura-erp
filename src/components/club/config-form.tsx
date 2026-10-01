@@ -15,6 +15,8 @@ type Config = {
   introTitulo: string;
   introTexto: string | null;
   novedadesTexto: string | null;
+  feedbackTexto: string | null;
+  feedbackUrl: string | null;
   footerTexto: string;
 };
 
@@ -80,6 +82,28 @@ export function ConfigForm({ config }: { config: Config }) {
           name="novedadesTexto"
           defaultValue={config.novedadesTexto ?? ""}
           placeholder="Dejame tu mail y te aviso únicamente cuando haya algo nuevo para Fundadores."
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="feedbackUrl">Formulario de feedback (link)</Label>
+        <Input
+          id="feedbackUrl"
+          name="feedbackUrl"
+          defaultValue={config.feedbackUrl ?? ""}
+          placeholder="https://forms.gle/..."
+        />
+        <p className="text-xs text-muted-foreground">
+          Link a tu formulario (Google Forms, Tally, el que uses). Si lo dejás vacío, el bloque
+          de feedback no aparece en la página.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="feedbackTexto">Texto del bloque de feedback</Label>
+        <Textarea
+          id="feedbackTexto"
+          name="feedbackTexto"
+          defaultValue={config.feedbackTexto ?? ""}
+          placeholder="Sos de los primeros en entrar acá. Lo que me digas cambia lo que viene."
         />
       </div>
       <div className="space-y-2">

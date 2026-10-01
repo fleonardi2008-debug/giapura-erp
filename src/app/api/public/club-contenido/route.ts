@@ -33,6 +33,8 @@ export async function GET() {
         introTitulo: "Qué es este acceso",
         introTexto: null,
         novedadesTexto: null,
+        feedbackTexto: null,
+        feedbackUrl: null,
         footerTexto: "Gracias por haber estado desde el principio. — Fran",
       },
       bloques: bloques.map((b) => ({
