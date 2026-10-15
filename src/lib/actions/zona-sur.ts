@@ -72,6 +72,30 @@ export async function actualizarEstadoZonaSurPedido(pedidoId: string, estado: Zo
   return { success: true };
 }
 
+const estadosMasivosSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1, "No hay pedidos seleccionados").max(500),
+  estado: z.nativeEnum(ZonaSurEstado),
+});
+
+/** Cambia el estado de varios pedidos de una vez (casillas de la lista de Pedidos Zona Sur). */
+export async function actualizarEstadoZonaSurPedidos(ids: string[], estado: ZonaSurEstado) {
+  await requireOwner();
+
+  const parsed = estadosMasivosSchema.safeParse({ ids, estado });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  const resultado = await prisma.zonaSurPedido.updateMany({
+    where: { id: { in: parsed.data.ids } },
+    data: { estado: parsed.data.estado },
+  });
+
+  revalidatePath("/pedidos-zona-sur");
+  revalidatePath("/etiquetas");
+  return { success: true, cantidad: resultado.count };
+}
+
 // ---------- Pedido publico (sin login, lo llama el formulario del cliente) ----------
 
 const itemSchema = z.object({
