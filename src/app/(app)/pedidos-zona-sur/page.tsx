@@ -54,6 +54,7 @@ export default async function PedidosZonaSurPage() {
               <TableHead>Pago</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Etiqueta</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -98,6 +99,16 @@ export default async function PedidosZonaSurPage() {
                 </TableCell>
                 <TableCell>
                   <EstadoPedidoSelect pedidoId={pedido.id} estado={pedido.estado} />
+                </TableCell>
+                <TableCell className="text-sm">
+                  <a
+                    href={`/imprimir-etiquetas?ids=${pedido.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Imprimir
+                  </a>
                 </TableCell>
               </TableRow>
             ))}

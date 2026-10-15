@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 const RUTA_FABRICA = "/produccion";
+const RUTAS_FULFILLMENT = ["/etiquetas", "/imprimir-etiquetas"];
 
 export async function proxy(request: NextRequest) {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
@@ -18,6 +19,14 @@ export async function proxy(request: NextRequest) {
   // la página actual, así que esto también bloquea que dispare la acción de otra ruta.
   if (token.role === "OPERADOR" && request.nextUrl.pathname !== RUTA_FABRICA) {
     return NextResponse.redirect(new URL(RUTA_FABRICA, request.url));
+  }
+
+  // La empresa de fulfillment solo ve las etiquetas de Zona Sur (y su vista de impresión).
+  if (
+    token.role === "FULFILLMENT" &&
+    !RUTAS_FULFILLMENT.some((ruta) => request.nextUrl.pathname === ruta || request.nextUrl.pathname.startsWith(ruta + "/"))
+  ) {
+    return NextResponse.redirect(new URL(RUTAS_FULFILLMENT[0], request.url));
   }
 
   return NextResponse.next();

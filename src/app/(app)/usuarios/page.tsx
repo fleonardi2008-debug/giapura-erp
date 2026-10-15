@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { NuevoUsuarioDialog } from "@/components/usuarios/nuevo-usuario-dialog";
 import { ToggleUsuarioButton } from "@/components/usuarios/toggle-usuario-button";
 
-const ROLE_LABEL: Record<string, string> = { OWNER: "Dueño", OPERADOR: "Operador (fábrica)" };
+const ROLE_LABEL: Record<string, string> = { OWNER: "Dueño", OPERADOR: "Operador (fábrica)", FULFILLMENT: "Fulfillment (etiquetas)" };
 
 export default async function UsuariosPage() {
   const session = await getSession();

@@ -25,6 +25,7 @@ import { createUsuario } from "@/lib/actions/usuarios";
 const ROLE_LABEL: Record<string, string> = {
   OPERADOR: "Operador (fábrica) — solo ve Producción",
   OWNER: "Dueño — ve todo el sistema",
+  FULFILLMENT: "Fulfillment — solo ve e imprime etiquetas de Zona Sur",
 };
 
 export function NuevoUsuarioDialog() {
@@ -61,6 +62,7 @@ export function NuevoUsuarioDialog() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="OPERADOR">{ROLE_LABEL.OPERADOR}</SelectItem>
+                <SelectItem value="FULFILLMENT">{ROLE_LABEL.FULFILLMENT}</SelectItem>
                 <SelectItem value="OWNER">{ROLE_LABEL.OWNER}</SelectItem>
               </SelectContent>
             </Select>

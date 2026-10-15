@@ -7,9 +7,10 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { ZonaSurEstado, ZonaSurMetodoEntrega, ZonaSurMetodoPago } from "@/generated/prisma/client";
 
-async function requireSession() {
+async function requireOwner() {
   const session = await getSession();
   if (!session) throw new Error("No autenticado");
+  if (session.user.role !== "OWNER") throw new Error("No autorizado");
   return session;
 }
 
@@ -28,7 +29,7 @@ const configSchema = z.object({
 });
 
 export async function guardarZonaSurConfig(formData: FormData) {
-  await requireSession();
+  await requireOwner();
 
   const parsed = configSchema.safeParse({
     zonaNombre: formData.get("zonaNombre"),
@@ -60,7 +61,7 @@ export async function guardarZonaSurConfig(formData: FormData) {
 // ---------- Pedidos ----------
 
 export async function actualizarEstadoZonaSurPedido(pedidoId: string, estado: ZonaSurEstado) {
-  await requireSession();
+  await requireOwner();
 
   await prisma.zonaSurPedido.update({
     where: { id: pedidoId },
