@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { ListaEtiquetas, type FilaEtiqueta } from "@/components/etiquetas/lista-etiquetas";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ENTREGA_LABEL, INCLUDE_ETIQUETA, destinoPedido, totalPaquetes } from "@/lib/etiquetas";
+import { ENTREGA_LABEL, INCLUDE_ETIQUETA, destinoPedido } from "@/lib/etiquetas";
 import type { ZonaSurEstado } from "@/generated/prisma/client";
 
 const FILTROS: { valor: ZonaSurEstado | "TODOS"; label: string }[] = [
@@ -44,7 +44,6 @@ export default async function EtiquetasPage({
     entrega: ENTREGA_LABEL[p.metodoEntrega],
     destino: destinoPedido(p),
     productos: p.items.map((i) => `${i.cantidad} × ${i.nombre}`),
-    etiquetas: totalPaquetes(p),
   }));
 
   return (
@@ -52,8 +51,8 @@ export default async function EtiquetasPage({
       <div>
         <h1 className="text-2xl font-semibold">Etiquetas Zona Sur</h1>
         <p className="text-muted-foreground">
-          Una etiqueta chica por cada pack, con el nombre, adónde va y qué frascos lleva. Marcá los pedidos que querés
-          imprimir.
+          Una etiqueta chica por pedido, con el nombre, adónde va y qué frascos lleva cada pack. Marcá los pedidos que
+          querés imprimir.
         </p>
       </div>
 

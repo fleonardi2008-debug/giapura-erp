@@ -20,6 +20,13 @@ export const INCLUDE_ETIQUETA = {
 
 export type PedidoParaEtiqueta = Prisma.ZonaSurPedidoGetPayload<{ include: typeof INCLUDE_ETIQUETA }>;
 
+export type EtiquetaItem = {
+  cantidad: number;
+  nombre: string;
+  /** Frascos que lleva cada pack. Vacío si es un frasco suelto o el pack no tiene composición cargada. */
+  frascos: { nombre: string; cantidad: number }[];
+};
+
 export type Etiqueta = {
   clave: string;
   codigo: string;
@@ -27,10 +34,9 @@ export type Etiqueta = {
   cliente: string;
   entrega: string;
   destino: string;
-  producto: string;
-  frascos: { nombre: string; cantidad: number }[];
-  numero: number;
-  total: number;
+  items: EtiquetaItem[];
+  /** Unidades que lleva el pedido en total (suma de cantidades). */
+  unidades: number;
 };
 
 export const ENTREGA_LABEL: Record<ZonaSurMetodoEntrega, string> = {
@@ -49,49 +55,33 @@ export function destinoPedido(p: Pick<PedidoParaEtiqueta, "metodoEntrega" | "dir
   return texto?.trim() || "—";
 }
 
-/** Cuántos paquetes (packs o unidades) lleva el pedido en total. */
-export function totalPaquetes(p: Pick<PedidoParaEtiqueta, "items">) {
+export function totalUnidades(p: Pick<PedidoParaEtiqueta, "items">) {
   return p.items.reduce((suma, item) => suma + item.cantidad, 0);
 }
 
 /**
- * Una etiqueta por cada pack del pedido (si pidió 2 packs iguales salen 2 etiquetas,
- * "Paquete 1 de 2" y "Paquete 2 de 2"). Si el producto es un pack, lista los frascos que
- * lleva según su composición; si es un frasco suelto, lo lista a él mismo.
+ * Una etiqueta por pedido, con todos sus productos. Para cada pack lista los frascos que
+ * lleva según su composición (si pidió 2 iguales, cada uno lleva esos frascos); un frasco
+ * suelto se lista a sí mismo.
  */
 export function armarEtiquetas(pedidos: PedidoParaEtiqueta[]): Etiqueta[] {
-  const etiquetas: Etiqueta[] = [];
-
-  for (const pedido of pedidos) {
-    const total = totalPaquetes(pedido);
-    let numero = 0;
-
-    for (const item of pedido.items) {
-      const composicion = item.sku?.nivel === "PACK" ? item.sku.composicion : [];
-      const frascos =
-        composicion.length > 0
-          ? composicion
+  return pedidos.map((pedido) => ({
+    clave: pedido.id,
+    codigo: codigoPedido(pedido.id),
+    fecha: pedido.createdAt,
+    cliente: pedido.clienteNombre,
+    entrega: ENTREGA_LABEL[pedido.metodoEntrega],
+    destino: destinoPedido(pedido),
+    unidades: totalUnidades(pedido),
+    items: pedido.items.map((item) => ({
+      cantidad: item.cantidad,
+      nombre: item.nombre,
+      frascos:
+        item.sku?.nivel === "PACK"
+          ? item.sku.composicion
               .map((c) => ({ nombre: c.componente.nombre, cantidad: c.cantidad }))
               .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
-          : [{ nombre: item.nombre, cantidad: 1 }];
-
-      for (let i = 0; i < item.cantidad; i++) {
-        numero += 1;
-        etiquetas.push({
-          clave: `${pedido.id}-${item.id}-${i}`,
-          codigo: codigoPedido(pedido.id),
-          fecha: pedido.createdAt,
-          cliente: pedido.clienteNombre,
-          entrega: ENTREGA_LABEL[pedido.metodoEntrega],
-          destino: destinoPedido(pedido),
-          producto: item.nombre,
-          frascos,
-          numero,
-          total,
-        });
-      }
-    }
-  }
-
-  return etiquetas;
+          : [],
+    })),
+  }));
 }
