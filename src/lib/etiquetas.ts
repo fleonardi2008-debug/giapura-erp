@@ -4,6 +4,11 @@ import type { Prisma, ZonaSurMetodoEntrega } from "@/generated/prisma/client";
 export const ETIQUETA_ANCHO_MM = 80;
 export const ETIQUETA_ALTO_MM = 50;
 
+/** 2 columnas x 5 filas de 80x50 mm entran en una hoja A4 (con 10 mm de margen). */
+export const ETIQUETAS_POR_HOJA_A4 = 10;
+
+export type FormatoEtiqueta = "etiquetera" | "a4";
+
 /** Lo mínimo que se lee de la base para armar etiquetas (sin mails, teléfonos ni montos). */
 export const INCLUDE_ETIQUETA = {
   items: {
