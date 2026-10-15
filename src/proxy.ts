@@ -3,7 +3,8 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 const RUTA_FABRICA = "/produccion";
-const RUTAS_FULFILLMENT = ["/etiquetas", "/imprimir-etiquetas"];
+// Además de Producción, el operador arma los pedidos (fulfillment): ve e imprime las etiquetas de Zona Sur.
+const RUTAS_OPERADOR = [RUTA_FABRICA, "/etiquetas", "/imprimir-etiquetas"];
 
 export async function proxy(request: NextRequest) {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
@@ -14,19 +15,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // El operador de fábrica tiene un login limitado: solo ve /produccion, sin costos,
+  // El operador de fábrica tiene un login limitado: solo ve /produccion y las etiquetas, sin costos,
   // plata ni el resto del sistema. Un Server Action llega acá como POST a la URL de
   // la página actual, así que esto también bloquea que dispare la acción de otra ruta.
-  if (token.role === "OPERADOR" && request.nextUrl.pathname !== RUTA_FABRICA) {
-    return NextResponse.redirect(new URL(RUTA_FABRICA, request.url));
-  }
-
-  // La empresa de fulfillment solo ve las etiquetas de Zona Sur (y su vista de impresión).
   if (
-    token.role === "FULFILLMENT" &&
-    !RUTAS_FULFILLMENT.some((ruta) => request.nextUrl.pathname === ruta || request.nextUrl.pathname.startsWith(ruta + "/"))
+    token.role === "OPERADOR" &&
+    !RUTAS_OPERADOR.some((ruta) => request.nextUrl.pathname === ruta || request.nextUrl.pathname.startsWith(ruta + "/"))
   ) {
-    return NextResponse.redirect(new URL(RUTAS_FULFILLMENT[0], request.url));
+    return NextResponse.redirect(new URL(RUTA_FABRICA, request.url));
   }
 
   return NextResponse.next();

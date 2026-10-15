@@ -13,7 +13,6 @@ datasource db {
 enum Role {
   OWNER
   OPERADOR
-  FULFILLMENT // empresa de fulfillment: solo ve e imprime etiquetas de Zona Sur
 }
 
 enum TipoInsumo {

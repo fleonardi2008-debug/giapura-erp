@@ -26,15 +26,16 @@ const linksDueno = [
   { href: "/usuarios", label: "Usuarios" },
 ];
 
-// El operador de fábrica entra con un login propio y limitado: solo ve esta pantalla.
-const linksFabrica = [{ href: "/produccion", label: "Producción" }];
-
-// La empresa de fulfillment entra con un login propio y solo ve las etiquetas.
-const linksFulfillment = [{ href: "/etiquetas", label: "Etiquetas" }];
+// El operador de fábrica entra con un login propio y limitado: solo ve Producción y las etiquetas
+// (también es quien arma los pedidos de Zona Sur).
+const linksFabrica = [
+  { href: "/produccion", label: "Producción" },
+  { href: "/etiquetas", label: "Etiquetas Zona Sur" },
+];
 
 export function NavSidebar({ userName, role }: { userName: string; role: string }) {
   const pathname = usePathname();
-  const links = role === "OWNER" ? linksDueno : role === "FULFILLMENT" ? linksFulfillment : linksFabrica;
+  const links = role === "OWNER" ? linksDueno : linksFabrica;
 
   return (
     <aside className="flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar">

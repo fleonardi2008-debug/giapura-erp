@@ -23,9 +23,9 @@ export default async function EtiquetasPage({
   const session = await getSession();
   if (!session) redirect("/login");
   const rol = session.user.role;
-  if (rol !== "OWNER" && rol !== "FULFILLMENT") redirect("/");
+  if (rol !== "OWNER" && rol !== "OPERADOR") redirect("/");
 
-  // El fulfillment solo trabaja con los pedidos confirmados; el dueño puede mirar el resto.
+  // El operador solo trabaja con los pedidos confirmados; el dueño puede mirar el resto.
   const pedido = (await searchParams).estado;
   const pedidoEstado = Array.isArray(pedido) ? pedido[0] : pedido;
   const filtro = rol === "OWNER" ? (FILTROS.find((f) => f.valor === pedidoEstado)?.valor ?? "CONFIRMADO") : "CONFIRMADO";

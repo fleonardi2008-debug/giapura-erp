@@ -18,7 +18,7 @@ export default async function ImprimirEtiquetasPage({
   const session = await getSession();
   if (!session) redirect("/login");
   const rol = session.user.role;
-  if (rol !== "OWNER" && rol !== "FULFILLMENT") redirect("/");
+  if (rol !== "OWNER" && rol !== "OPERADOR") redirect("/");
 
   const crudo = (await searchParams).ids;
   const ids = (Array.isArray(crudo) ? crudo.join(",") : (crudo ?? ""))
@@ -31,8 +31,8 @@ export default async function ImprimirEtiquetasPage({
     ids.length === 0
       ? []
       : await prisma.zonaSurPedido.findMany({
-          // El fulfillment solo puede imprimir pedidos confirmados, aunque pida otro id a mano.
-          where: { id: { in: ids }, ...(rol === "FULFILLMENT" ? { estado: "CONFIRMADO" } : {}) },
+          // El operador solo puede imprimir pedidos confirmados, aunque pida otro id a mano.
+          where: { id: { in: ids }, ...(rol === "OPERADOR" ? { estado: "CONFIRMADO" } : {}) },
           orderBy: { createdAt: "asc" },
           include: INCLUDE_ETIQUETA,
         });
