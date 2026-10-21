@@ -6,6 +6,7 @@ import { put } from "@vercel/blob";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { ZonaSurEstado, ZonaSurMetodoEntrega, ZonaSurMetodoPago } from "@/generated/prisma/client";
+import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
 
 async function requireOwner() {
   const session = await getSession();
@@ -26,6 +27,8 @@ const configSchema = z.object({
   titularCuenta: z.string().optional(),
   puntoQuilmesTexto: z.string().optional(),
   puntoBernalTexto: z.string().optional(),
+  colegioNombre: z.string().optional(),
+  colegioDias: z.string().optional(),
 });
 
 export async function guardarZonaSurConfig(formData: FormData) {
@@ -41,19 +44,27 @@ export async function guardarZonaSurConfig(formData: FormData) {
     titularCuenta: formData.get("titularCuenta") ?? "",
     puntoQuilmesTexto: formData.get("puntoQuilmesTexto") ?? "",
     puntoBernalTexto: formData.get("puntoBernalTexto") ?? "",
+    colegioNombre: formData.get("colegioNombre") ?? "",
+    colegioDias: formData.get("colegioDias") ?? "",
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
 
+  const data = {
+    ...parsed.data,
+    colegioDias: parsearDiasColegio(parsed.data.colegioDias).join("\n"),
+  };
+
   await prisma.zonaSurConfig.upsert({
     where: { id: "singleton" },
-    create: { id: "singleton", ...parsed.data },
-    update: parsed.data,
+    create: { id: "singleton", ...data },
+    update: data,
   });
 
   revalidatePath("/pedidos-zona-sur/config");
+  revalidatePath("/pedidos-zona-sur/colegio");
   revalidatePath("/zona-sur");
   return { success: true };
 }
@@ -109,6 +120,7 @@ const pedidoPublicoSchema = z.object({
   clienteTelefono: z.string().min(6, "Falta el teléfono"),
   metodoEntrega: z.nativeEnum(ZonaSurMetodoEntrega),
   direccion: z.string().optional(),
+  colegioDia: z.string().optional(),
   metodoPago: z.nativeEnum(ZonaSurMetodoPago),
   pagaCon: z.coerce.number().optional(),
   items: z.string().transform((v, ctx) => {
@@ -129,6 +141,7 @@ export async function crearZonaSurPedido(formData: FormData) {
     clienteTelefono: formData.get("clienteTelefono"),
     metodoEntrega: formData.get("metodoEntrega"),
     direccion: formData.get("direccion") ?? "",
+    colegioDia: formData.get("colegioDia") ?? "",
     metodoPago: formData.get("metodoPago"),
     pagaCon: formData.get("pagaCon") || undefined,
     items: formData.get("items"),
@@ -163,6 +176,21 @@ export async function crearZonaSurPedido(formData: FormData) {
   } else if (data.metodoEntrega === "PUNTO_BERNAL") {
     if (!config.puntoBernalTexto?.trim()) return { error: "Por ahora no hay un punto de encuentro en Bernal. Probá con envío o con Quilmes." };
     puntoElegido = config.puntoBernalTexto;
+  }
+
+  // Colegio: el día tiene que ser uno de los que están ofrecidos hoy. Se guarda el día
+  // tal cual figuraba y, en puntoElegido, el lugar + el día (así lo muestran etiquetas y lista).
+  let colegioDia: string | null = null;
+  if (data.metodoEntrega === "COLEGIO") {
+    const dias = parsearDiasColegio(config.colegioDias);
+    if (!config.colegioNombre?.trim() || dias.length === 0) {
+      return { error: "Por ahora no hay entregas en el colegio. Probá con envío o con un punto de encuentro." };
+    }
+    const elegido = data.colegioDia?.trim();
+    if (!elegido) return { error: "Elegí el día en que te lo llevamos al colegio" };
+    if (!dias.includes(elegido)) return { error: "Ese día ya no está disponible. Elegí otro de la lista." };
+    colegioDia = elegido;
+    puntoElegido = `${config.colegioNombre.trim()} — ${elegido}`;
   }
 
   // El precio de cada producto se busca en el servidor (nunca se confia en lo
@@ -207,6 +235,7 @@ export async function crearZonaSurPedido(formData: FormData) {
       metodoEntrega: data.metodoEntrega,
       direccion: data.metodoEntrega === "ENVIO_ZONA" ? data.direccion : null,
       puntoElegido,
+      colegioDia,
       metodoPago: data.metodoPago,
       comprobanteUrl,
       pagaCon: data.metodoPago === "EFECTIVO" ? data.pagaCon : null,
@@ -216,5 +245,6 @@ export async function crearZonaSurPedido(formData: FormData) {
   });
 
   revalidatePath("/pedidos-zona-sur");
+  revalidatePath("/pedidos-zona-sur/colegio");
   return { success: true };
 }

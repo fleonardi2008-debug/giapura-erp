@@ -48,6 +48,7 @@ export const ENTREGA_LABEL: Record<ZonaSurMetodoEntrega, string> = {
   ENVIO_ZONA: "Envío a domicilio",
   PUNTO_QUILMES: "Retiro en Quilmes",
   PUNTO_BERNAL: "Retiro en Bernal",
+  COLEGIO: "Entrega en el colegio",
 };
 
 /** Código corto para identificar el pedido a simple vista (ej: "K3F9Q"). */

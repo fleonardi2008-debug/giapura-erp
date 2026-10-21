@@ -556,6 +556,7 @@ enum ZonaSurMetodoEntrega {
   ENVIO_ZONA
   PUNTO_QUILMES
   PUNTO_BERNAL
+  COLEGIO
 }
 
 enum ZonaSurMetodoPago {
@@ -584,6 +585,8 @@ model ZonaSurConfig {
   titularCuenta     String?
   puntoQuilmesTexto String? // ej: "Jueves 25/9, 18 a 20hs, Rivadavia y Alsina"
   puntoBernalTexto  String?
+  colegioNombre     String? // ej: "Colegio San José, puerta principal, 12:30hs"
+  colegioDias       String? // un día por línea (ej: "Martes 21/10"); se actualiza semana a semana
   updatedAt         DateTime @updatedAt
 }
 
@@ -595,6 +598,7 @@ model ZonaSurPedido {
   metodoEntrega  ZonaSurMetodoEntrega
   direccion      String? // solo si metodoEntrega = ENVIO_ZONA
   puntoElegido   String? // copia del texto del punto vigente al momento del pedido
+  colegioDia     String? // solo si metodoEntrega = COLEGIO: el día elegido, tal cual figuraba en la config
   metodoPago     ZonaSurMetodoPago
   comprobanteUrl String? // solo si metodoPago = TRANSFERENCIA
   pagaCon        Decimal?             @db.Decimal(14, 2) // solo si metodoPago = EFECTIVO, para saber cuánto vuelto llevar
@@ -608,6 +612,7 @@ model ZonaSurPedido {
 
   @@index([createdAt])
   @@index([estado])
+  @@index([colegioDia])
 }
 
 model ZonaSurPedidoItem {

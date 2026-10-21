@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { ZonaSurPedidoForm } from "@/components/zona-sur/pedido-form";
+import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,8 @@ export default async function ZonaSurPage() {
           titularCuenta: config.titularCuenta,
           puntoQuilmesTexto: config.puntoQuilmesTexto,
           puntoBernalTexto: config.puntoBernalTexto,
+          colegioNombre: config.colegioNombre,
+          colegioDias: parsearDiasColegio(config.colegioDias),
         }}
         skus={skus.map((s) => ({
           id: s.id,

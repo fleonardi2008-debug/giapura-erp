@@ -15,6 +15,7 @@ const ENTREGA_LABEL: Record<string, string> = {
   ENVIO_ZONA: "Envío a domicilio",
   PUNTO_QUILMES: "Retiro en Quilmes",
   PUNTO_BERNAL: "Retiro en Bernal",
+  COLEGIO: "Entrega en el colegio",
 };
 
 const PAGO_LABEL: Record<string, string> = {
@@ -42,9 +43,14 @@ export default async function PedidosZonaSurPage() {
             . Se coordinan y confirman a mano, no se sincronizan con Tienda Nube.
           </p>
         </div>
-        <Link href="/pedidos-zona-sur/config" className={cn(buttonVariants({ variant: "secondary" }))}>
-          Configurar zona y puntos
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/pedidos-zona-sur/colegio" className={cn(buttonVariants({ variant: "secondary" }))}>
+            Entregas en el colegio
+          </Link>
+          <Link href="/pedidos-zona-sur/config" className={cn(buttonVariants({ variant: "secondary" }))}>
+            Configurar zona y puntos
+          </Link>
+        </div>
       </div>
 
       {pedidos.length === 0 ? (

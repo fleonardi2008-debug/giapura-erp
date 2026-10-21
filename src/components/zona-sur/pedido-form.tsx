@@ -25,9 +25,11 @@ type Config = {
   titularCuenta: string | null;
   puntoQuilmesTexto: string | null;
   puntoBernalTexto: string | null;
+  colegioNombre: string | null;
+  colegioDias: string[];
 };
 
-type MetodoEntrega = "ENVIO_ZONA" | "PUNTO_QUILMES" | "PUNTO_BERNAL";
+type MetodoEntrega = "ENVIO_ZONA" | "PUNTO_QUILMES" | "PUNTO_BERNAL" | "COLEGIO";
 type MetodoPago = "TRANSFERENCIA" | "EFECTIVO";
 
 function moneyAR(n: number) {
@@ -64,6 +66,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [metodoEntrega, setMetodoEntrega] = useState<MetodoEntrega>("ENVIO_ZONA");
   const [direccion, setDireccion] = useState("");
+  const [colegioDia, setColegioDia] = useState("");
   const [metodoPago, setMetodoPago] = useState<MetodoPago>("TRANSFERENCIA");
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -73,6 +76,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
 
   const hayQuilmes = !!config.puntoQuilmesTexto?.trim();
   const hayBernal = !!config.puntoBernalTexto?.trim();
+  const hayColegio = !!config.colegioNombre?.trim() && config.colegioDias.length > 0;
 
   const subtotal = useMemo(
     () => skus.reduce((acc, s) => acc + (cantidades[s.id] ?? 0) * s.precioVenta, 0),
@@ -90,6 +94,10 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
       toast.error("Elegí al menos un pack");
       return;
     }
+    if (metodoEntrega === "COLEGIO" && !colegioDia) {
+      toast.error("Elegí el día en que te lo llevamos al colegio");
+      return;
+    }
     const items = skus
       .filter((s) => (cantidades[s.id] ?? 0) > 0)
       .map((s) => ({ skuId: s.id, cantidad: cantidades[s.id] }));
@@ -97,6 +105,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
     formData.set("metodoEntrega", metodoEntrega);
     formData.set("metodoPago", metodoPago);
     if (metodoEntrega === "ENVIO_ZONA") formData.set("direccion", direccion);
+    if (metodoEntrega === "COLEGIO") formData.set("colegioDia", colegioDia);
 
     startTransition(async () => {
       const result = await crearZonaSurPedido(formData);
@@ -114,8 +123,23 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
         <h1 className="text-3xl font-semibold">¡Listo, {nombre.split(" ")[0]}!</h1>
         <p className="text-[var(--muted-foreground)]">
           Recibimos tu pedido. Te vamos a escribir por WhatsApp o mail a{" "}
-          <strong>{email}</strong> para coordinar {metodoEntrega === "ENVIO_ZONA" ? "el envío" : "la entrega en el punto de encuentro"}.
+          <strong>{email}</strong> para coordinar{" "}
+          {metodoEntrega === "ENVIO_ZONA"
+            ? "el envío"
+            : metodoEntrega === "COLEGIO"
+              ? "la entrega en el colegio"
+              : "la entrega en el punto de encuentro"}
+          .
         </p>
+        {metodoEntrega === "COLEGIO" && (
+          <p className="rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm">
+            <strong>{colegioDia}</strong>
+            <br />
+            {config.colegioNombre}
+            <br />
+            <span className="text-[var(--muted-foreground)]">El día anterior a la noche te mandamos un recordatorio.</span>
+          </p>
+        )}
       </div>
     );
   }
@@ -199,7 +223,29 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
             <span className="font-medium">Retiro en Bernal {!hayBernal && "(sin punto esta semana)"}</span>
             {hayBernal && <span className="whitespace-pre-line text-sm text-[var(--muted-foreground)]">{config.puntoBernalTexto}</span>}
           </TarjetaOpcion>
+          {hayColegio && (
+            <TarjetaOpcion activo={metodoEntrega === "COLEGIO"} onClick={() => setMetodoEntrega("COLEGIO")}>
+              <span className="font-medium">Retiro en el colegio</span>
+              <span className="whitespace-pre-line text-sm text-[var(--muted-foreground)]">{config.colegioNombre}</span>
+            </TarjetaOpcion>
+          )}
         </div>
+
+        {metodoEntrega === "COLEGIO" && hayColegio && (
+          <div className="space-y-2 pt-1" role="group" aria-label="Día de entrega en el colegio">
+            <p className="text-sm font-medium">¿Qué día te lo llevamos?</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {config.colegioDias.map((dia) => (
+                <TarjetaOpcion key={dia} activo={colegioDia === dia} onClick={() => setColegioDia(dia)}>
+                  <span className="font-medium">{dia}</span>
+                </TarjetaOpcion>
+              ))}
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)]">
+              El día anterior a la noche te mandamos un recordatorio por WhatsApp.
+            </p>
+          </div>
+        )}
 
         {metodoEntrega === "ENVIO_ZONA" && (
           <div className="space-y-3 pt-1">

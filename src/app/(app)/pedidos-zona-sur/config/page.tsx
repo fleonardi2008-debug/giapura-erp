@@ -31,6 +31,8 @@ export default async function ZonaSurConfigPage() {
           titularCuenta: config.titularCuenta,
           puntoQuilmesTexto: config.puntoQuilmesTexto,
           puntoBernalTexto: config.puntoBernalTexto,
+          colegioNombre: config.colegioNombre,
+          colegioDias: config.colegioDias,
         }}
       />
     </div>

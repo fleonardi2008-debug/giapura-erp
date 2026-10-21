@@ -26,6 +26,8 @@ type Config = {
   titularCuenta: string | null;
   puntoQuilmesTexto: string | null;
   puntoBernalTexto: string | null;
+  colegioNombre: string | null;
+  colegioDias: string | null;
 };
 
 export function ZonaSurConfigForm({ config }: { config: Config }) {
@@ -178,6 +180,38 @@ export function ZonaSurConfigForm({ config }: { config: Config }) {
           </div>
           <p className="text-xs text-muted-foreground sm:col-span-2">
             Dejá el campo vacío si esa semana no ofrecés ese punto: no va a aparecer como opción en la página.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Entrega en el colegio</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="colegioNombre">Colegio y horario</Label>
+            <Textarea
+              id="colegioNombre"
+              name="colegioNombre"
+              rows={4}
+              defaultValue={config.colegioNombre ?? ""}
+              placeholder="Ej: Colegio San José, puerta principal, 12:30hs"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="colegioDias">Días disponibles (uno por línea)</Label>
+            <Textarea
+              id="colegioDias"
+              name="colegioDias"
+              rows={4}
+              defaultValue={config.colegioDias ?? ""}
+              placeholder={"Martes 21/10\nJueves 23/10"}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground sm:col-span-2">
+            El cliente elige uno de estos días. Dejá vacío cualquiera de los dos campos y la opción de colegio no
+            aparece en la página. Los pedidos que ya se hicieron conservan el día que eligieron.
           </p>
         </CardContent>
       </Card>
