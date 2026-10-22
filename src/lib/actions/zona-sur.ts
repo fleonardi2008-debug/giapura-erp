@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { ZonaSurEstado, ZonaSurMetodoEntrega, ZonaSurMetodoPago } from "@/generated/prisma/client";
 import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
+import { parsearTarifasAndreani } from "@/lib/zona-sur-andreani";
 
 async function requireOwner() {
   const session = await getSession();
@@ -29,6 +30,8 @@ const configSchema = z.object({
   puntoBernalTexto: z.string().optional(),
   colegioNombre: z.string().optional(),
   colegioDias: z.string().optional(),
+  andreaniTexto: z.string().optional(),
+  andreaniTarifas: z.string().optional(),
 });
 
 export async function guardarZonaSurConfig(formData: FormData) {
@@ -46,15 +49,27 @@ export async function guardarZonaSurConfig(formData: FormData) {
     puntoBernalTexto: formData.get("puntoBernalTexto") ?? "",
     colegioNombre: formData.get("colegioNombre") ?? "",
     colegioDias: formData.get("colegioDias") ?? "",
+    andreaniTexto: formData.get("andreaniTexto") ?? "",
+    andreaniTarifas: formData.get("andreaniTarifas") ?? "",
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
 
+  // Si una línea de la tabla de precios está mal escrita, se avisa cuál en vez de guardarla rota.
+  const { errores } = parsearTarifasAndreani(parsed.data.andreaniTarifas);
+  if (errores.length > 0) {
+    const e = errores[0];
+    return {
+      error: `La línea ${e.linea} de la tabla de Andreani no se entiende: "${e.texto}". Formato: 1878 = 6500 o 1800-1999 = 6500`,
+    };
+  }
+
   const data = {
     ...parsed.data,
     colegioDias: parsearDiasColegio(parsed.data.colegioDias).join("\n"),
+    andreaniActivo: formData.get("andreaniActivo") === "on",
   };
 
   await prisma.zonaSurConfig.upsert({
@@ -107,6 +122,31 @@ export async function actualizarEstadoZonaSurPedidos(ids: string[], estado: Zona
   return { success: true, cantidad: resultado.count };
 }
 
+/**
+ * Guarda el link de Andreani de un pedido. Cada link es de un solo uso (después aparece como
+ * "no disponible"), así que se genera uno por pedido. Vacío = quitar el link.
+ */
+export async function guardarAndreaniLink(pedidoId: string, link: string) {
+  await requireOwner();
+
+  const limpio = link.trim();
+  if (limpio && !(/^https?:\/\//i.test(limpio) && z.string().url().safeParse(limpio).success)) {
+    return { error: "Eso no parece un link. Pegá el link completo que te dio Andreani." };
+  }
+
+  const pedido = await prisma.zonaSurPedido.findUnique({ where: { id: pedidoId }, select: { metodoEntrega: true } });
+  if (!pedido) return { error: "No encontré el pedido" };
+  if (pedido.metodoEntrega !== "ANDREANI") return { error: "Este pedido no es de Andreani" };
+
+  await prisma.zonaSurPedido.update({
+    where: { id: pedidoId },
+    data: { andreaniLink: limpio || null },
+  });
+
+  revalidatePath("/pedidos-zona-sur/andreani");
+  return { success: true };
+}
+
 // ---------- Pedido publico (sin login, lo llama el formulario del cliente) ----------
 
 const itemSchema = z.object({
@@ -156,6 +196,12 @@ export async function crearZonaSurPedido(formData: FormData) {
     return { error: "Falta la dirección de envío" };
   }
 
+  // El efectivo no se puede cobrar a distancia: con Andreani solo se paga por transferencia.
+  // (La dirección y el pago del envío los completa el cliente en el link de Andreani.)
+  if (data.metodoEntrega === "ANDREANI" && data.metodoPago === "EFECTIVO") {
+    return { error: "Con envío por Andreani solo se puede pagar por transferencia" };
+  }
+
   const comprobante = formData.get("comprobante");
   if (data.metodoPago === "TRANSFERENCIA" && !(comprobante instanceof File && comprobante.size > 0)) {
     return { error: "Falta subir el comprobante de la transferencia" };
@@ -166,6 +212,10 @@ export async function crearZonaSurPedido(formData: FormData) {
     create: { id: "singleton" },
     update: {},
   });
+
+  if (data.metodoEntrega === "ANDREANI" && !config.andreaniActivo) {
+    return { error: "Por ahora no hacemos envíos por Andreani. Probá con otra forma de entrega." };
+  }
 
   // El punto de encuentro elegido tiene que existir todavia (no vacio) y se
   // congela el texto tal cual esta hoy, por si Fran lo cambia despues.

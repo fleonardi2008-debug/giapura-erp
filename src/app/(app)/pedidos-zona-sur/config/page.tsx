@@ -33,6 +33,9 @@ export default async function ZonaSurConfigPage() {
           puntoBernalTexto: config.puntoBernalTexto,
           colegioNombre: config.colegioNombre,
           colegioDias: config.colegioDias,
+          andreaniActivo: config.andreaniActivo,
+          andreaniTexto: config.andreaniTexto,
+          andreaniTarifas: config.andreaniTarifas,
         }}
       />
     </div>

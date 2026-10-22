@@ -557,6 +557,7 @@ enum ZonaSurMetodoEntrega {
   PUNTO_QUILMES
   PUNTO_BERNAL
   COLEGIO
+  ANDREANI
 }
 
 enum ZonaSurMetodoPago {
@@ -587,6 +588,9 @@ model ZonaSurConfig {
   puntoBernalTexto  String?
   colegioNombre     String? // ej: "Colegio San José, puerta principal, 12:30hs"
   colegioDias       String? // un día por línea (ej: "Martes 21/10"); se actualiza semana a semana
+  andreaniActivo    Boolean  @default(false) // si está apagado, la opción no aparece en la página
+  andreaniTexto     String? // aclaración para el cliente, ej: "El costo del envío lo ves antes de pagar"
+  andreaniTarifas   String? // tabla de precios aproximados por código postal, una regla por línea (ej: "1800-1999 = 6500")
   updatedAt         DateTime @updatedAt
 }
 
@@ -597,6 +601,7 @@ model ZonaSurPedido {
   clienteTelefono String
   metodoEntrega  ZonaSurMetodoEntrega
   direccion      String? // solo si metodoEntrega = ENVIO_ZONA
+  andreaniLink   String? // solo si metodoEntrega = ANDREANI: link de un solo uso donde el cliente completa sus datos y paga el envío
   puntoElegido   String? // copia del texto del punto vigente al momento del pedido
   colegioDia     String? // solo si metodoEntrega = COLEGIO: el día elegido, tal cual figuraba en la config
   metodoPago     ZonaSurMetodoPago

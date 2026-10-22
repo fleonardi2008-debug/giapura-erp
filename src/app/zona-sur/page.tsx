@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { ZonaSurPedidoForm } from "@/components/zona-sur/pedido-form";
 import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
+import { parsearTarifasAndreani } from "@/lib/zona-sur-andreani";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,9 @@ export default async function ZonaSurPage() {
           puntoBernalTexto: config.puntoBernalTexto,
           colegioNombre: config.colegioNombre,
           colegioDias: parsearDiasColegio(config.colegioDias),
+          andreaniActivo: config.andreaniActivo,
+          andreaniTexto: config.andreaniTexto,
+          andreaniTarifas: parsearTarifasAndreani(config.andreaniTarifas).tarifas,
         }}
         skus={skus.map((s) => ({
           id: s.id,

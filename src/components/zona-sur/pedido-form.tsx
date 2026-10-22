@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { crearZonaSurPedido } from "@/lib/actions/zona-sur";
+import { estimarEnvioAndreani, numeroDeCodigoPostal, type TarifaAndreani } from "@/lib/zona-sur-andreani";
 import { cn } from "@/lib/utils";
 
 const MapaZona = dynamic(() => import("./mapa-zona").then((m) => m.MapaZona), {
@@ -27,9 +28,12 @@ type Config = {
   puntoBernalTexto: string | null;
   colegioNombre: string | null;
   colegioDias: string[];
+  andreaniActivo: boolean;
+  andreaniTexto: string | null;
+  andreaniTarifas: TarifaAndreani[];
 };
 
-type MetodoEntrega = "ENVIO_ZONA" | "PUNTO_QUILMES" | "PUNTO_BERNAL" | "COLEGIO";
+type MetodoEntrega = "ENVIO_ZONA" | "PUNTO_QUILMES" | "PUNTO_BERNAL" | "COLEGIO" | "ANDREANI";
 type MetodoPago = "TRANSFERENCIA" | "EFECTIVO";
 
 function moneyAR(n: number) {
@@ -67,6 +71,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
   const [metodoEntrega, setMetodoEntrega] = useState<MetodoEntrega>("ENVIO_ZONA");
   const [direccion, setDireccion] = useState("");
   const [colegioDia, setColegioDia] = useState("");
+  const [cpEstimado, setCpEstimado] = useState("");
   const [metodoPago, setMetodoPago] = useState<MetodoPago>("TRANSFERENCIA");
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -82,8 +87,24 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
     () => skus.reduce((acc, s) => acc + (cantidades[s.id] ?? 0) * s.precioVenta, 0),
     [skus, cantidades]
   );
+  // El envío por Andreani no suma acá: se paga aparte, directo a Andreani.
   const totalConEnvio = subtotal + (metodoEntrega === "ENVIO_ZONA" ? config.zonaPrecio : 0);
   const hayProductos = Object.values(cantidades).some((c) => c > 0);
+
+  const estimadoAndreani = estimarEnvioAndreani(config.andreaniTarifas, cpEstimado);
+  const mensajeEstimado = !cpEstimado.trim()
+    ? null
+    : numeroDeCodigoPostal(cpEstimado) === null
+      ? "Escribí los 4 números de tu código postal."
+      : estimadoAndreani === null
+        ? "No tenemos un aproximado para ese código postal. Lo ves en el link de Andreani antes de pagar."
+        : `Aproximadamente ${moneyAR(estimadoAndreani)}`;
+
+  // Andreani solo admite transferencia: si había elegido efectivo, se pasa a transferencia.
+  function elegirAndreani() {
+    setMetodoEntrega("ANDREANI");
+    setMetodoPago("TRANSFERENCIA");
+  }
 
   function cambiarCantidad(skuId: string, delta: number) {
     setCantidades((c) => ({ ...c, [skuId]: Math.max(0, (c[skuId] ?? 0) + delta) }));
@@ -126,9 +147,11 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
           <strong>{email}</strong> para coordinar{" "}
           {metodoEntrega === "ENVIO_ZONA"
             ? "el envío"
-            : metodoEntrega === "COLEGIO"
-              ? "la entrega en el colegio"
-              : "la entrega en el punto de encuentro"}
+            : metodoEntrega === "ANDREANI"
+              ? "el envío: te mandamos un link de Andreani para que completes tu dirección y pagues el envío"
+              : metodoEntrega === "COLEGIO"
+                ? "la entrega en el colegio"
+                : "la entrega en el punto de encuentro"}
           .
         </p>
         {metodoEntrega === "COLEGIO" && (
@@ -229,7 +252,49 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
               <span className="whitespace-pre-line text-sm text-[var(--muted-foreground)]">{config.colegioNombre}</span>
             </TarjetaOpcion>
           )}
+          {config.andreaniActivo && (
+            <TarjetaOpcion activo={metodoEntrega === "ANDREANI"} onClick={elegirAndreani}>
+              <span className="font-medium">Envío por Andreani</span>
+              <span className="text-sm text-[var(--muted-foreground)]">
+                Para cualquier lugar del país. El envío lo pagás directo a Andreani.
+                {config.andreaniTexto?.trim() && <> {config.andreaniTexto.trim()}</>}
+              </span>
+            </TarjetaOpcion>
+          )}
         </div>
+
+        {metodoEntrega === "ANDREANI" && config.andreaniActivo && (
+          <ol className="list-decimal space-y-1 rounded-2xl border border-[var(--border)] bg-[var(--card)] py-3 pl-9 pr-4 text-sm">
+            <li>Pagás los productos por transferencia y subís el comprobante.</li>
+            <li>Te mandamos por WhatsApp un link de Andreani.</li>
+            <li>En ese link completás tu dirección y pagás el envío a Andreani.</li>
+          </ol>
+        )}
+
+        {metodoEntrega === "ANDREANI" && config.andreaniActivo && config.andreaniTarifas.length > 0 && (
+          <div className="space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+            <Label htmlFor="cpEstimado">Calculá tu envío aproximado</Label>
+            <Input
+              id="cpEstimado"
+              value={cpEstimado}
+              onChange={(e) => setCpEstimado(e.target.value)}
+              onKeyDown={(e) => {
+                // Está dentro del formulario del pedido: Enter no tiene que mandarlo.
+                if (e.key === "Enter") e.preventDefault();
+              }}
+              placeholder="Tu código postal (ej: 1878)"
+              autoComplete="postal-code"
+              maxLength={8}
+              className="max-w-56"
+            />
+            <p aria-live="polite" className="min-h-5 text-sm font-medium">
+              {mensajeEstimado}
+            </p>
+            <p className="text-xs text-[var(--muted-foreground)]">
+              Es solo una referencia. El precio final lo ves en el link de Andreani antes de pagar.
+            </p>
+          </div>
+        )}
 
         {metodoEntrega === "COLEGIO" && hayColegio && (
           <div className="space-y-2 pt-1" role="group" aria-label="Día de entrega en el colegio">
@@ -274,9 +339,17 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
           <TarjetaOpcion activo={metodoPago === "TRANSFERENCIA"} onClick={() => setMetodoPago("TRANSFERENCIA")}>
             <span className="font-medium">Transferencia</span>
           </TarjetaOpcion>
-          <TarjetaOpcion activo={metodoPago === "EFECTIVO"} onClick={() => setMetodoPago("EFECTIVO")}>
+          <TarjetaOpcion
+            activo={metodoPago === "EFECTIVO"}
+            onClick={() => setMetodoPago("EFECTIVO")}
+            disabled={metodoEntrega === "ANDREANI"}
+          >
             <span className="font-medium">Efectivo</span>
-            <span className="text-sm text-[var(--muted-foreground)]">Se paga al recibir o retirar.</span>
+            <span className="text-sm text-[var(--muted-foreground)]">
+              {metodoEntrega === "ANDREANI"
+                ? "No disponible con envío por Andreani: solo transferencia."
+                : "Se paga al recibir o retirar."}
+            </span>
           </TarjetaOpcion>
         </div>
 

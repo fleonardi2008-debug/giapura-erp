@@ -49,6 +49,7 @@ export const ENTREGA_LABEL: Record<ZonaSurMetodoEntrega, string> = {
   PUNTO_QUILMES: "Retiro en Quilmes",
   PUNTO_BERNAL: "Retiro en Bernal",
   COLEGIO: "Entrega en el colegio",
+  ANDREANI: "Envío por Andreani",
 };
 
 /** Código corto para identificar el pedido a simple vista (ej: "K3F9Q"). */
@@ -57,6 +58,8 @@ export function codigoPedido(id: string) {
 }
 
 export function destinoPedido(p: Pick<PedidoParaEtiqueta, "metodoEntrega" | "direccion" | "puntoElegido">) {
+  // Con Andreani la dirección la completa el cliente en el link del correo, no la tenemos acá.
+  if (p.metodoEntrega === "ANDREANI") return "Andreani (datos en su link)";
   const texto = p.metodoEntrega === "ENVIO_ZONA" ? p.direccion : p.puntoElegido;
   return texto?.trim() || "—";
 }

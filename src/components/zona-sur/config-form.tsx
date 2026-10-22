@@ -28,6 +28,9 @@ type Config = {
   puntoBernalTexto: string | null;
   colegioNombre: string | null;
   colegioDias: string | null;
+  andreaniActivo: boolean;
+  andreaniTexto: string | null;
+  andreaniTarifas: string | null;
 };
 
 export function ZonaSurConfigForm({ config }: { config: Config }) {
@@ -212,6 +215,55 @@ export function ZonaSurConfigForm({ config }: { config: Config }) {
           <p className="text-xs text-muted-foreground sm:col-span-2">
             El cliente elige uno de estos días. Dejá vacío cualquiera de los dos campos y la opción de colegio no
             aparece en la página. Los pedidos que ya se hicieron conservan el día que eligieron.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Envío por Andreani</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input
+              type="checkbox"
+              name="andreaniActivo"
+              defaultChecked={config.andreaniActivo}
+              className="size-4"
+            />
+            Ofrecer envío por Andreani en la página
+          </label>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="andreaniTexto">Aclaración para el cliente (opcional)</Label>
+            <Input
+              id="andreaniTexto"
+              name="andreaniTexto"
+              defaultValue={config.andreaniTexto ?? ""}
+              placeholder="Ej: El costo del envío lo ves antes de pagarlo"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="andreaniTarifas">Precios aproximados por código postal (opcional)</Label>
+            <Textarea
+              id="andreaniTarifas"
+              name="andreaniTarifas"
+              rows={6}
+              defaultValue={config.andreaniTarifas ?? ""}
+              placeholder={"1000-1799 = 5800\n1800-1999 = 6500\n1878 = 5900\n2000-2999 = 8200"}
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Una regla por línea: un código postal (<code>1878 = 6500</code>) o un rango (
+              <code>1800-1999 = 6500</code>). Si coinciden varias, gana la más específica. Si cargás algo acá, en la
+              página aparece un casillero para que el cliente calcule su envío aproximado; si lo dejás vacío, no
+              aparece. Sacá los precios del cotizador de Andreani con el peso y medidas de tu paquete y actualizalos
+              cuando cambien.
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground sm:col-span-2">
+            El cliente paga los productos por transferencia (con Andreani no se puede pagar en efectivo). Después le
+            mandás, desde &quot;Envíos por Andreani&quot;, un link de Andreani donde completa su dirección y paga el
+            envío directo a ellos. Cada link se usa una sola vez, así que hay uno por pedido.
           </p>
         </CardContent>
       </Card>

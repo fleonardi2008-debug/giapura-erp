@@ -16,6 +16,7 @@ const ENTREGA_LABEL: Record<string, string> = {
   PUNTO_QUILMES: "Retiro en Quilmes",
   PUNTO_BERNAL: "Retiro en Bernal",
   COLEGIO: "Entrega en el colegio",
+  ANDREANI: "Envío por Andreani",
 };
 
 const PAGO_LABEL: Record<string, string> = {
@@ -46,6 +47,9 @@ export default async function PedidosZonaSurPage() {
         <div className="flex flex-wrap gap-2">
           <Link href="/pedidos-zona-sur/colegio" className={cn(buttonVariants({ variant: "secondary" }))}>
             Entregas en el colegio
+          </Link>
+          <Link href="/pedidos-zona-sur/andreani" className={cn(buttonVariants({ variant: "secondary" }))}>
+            Envíos por Andreani
           </Link>
           <Link href="/pedidos-zona-sur/config" className={cn(buttonVariants({ variant: "secondary" }))}>
             Configurar zona y puntos
