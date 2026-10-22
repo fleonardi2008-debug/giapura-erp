@@ -111,6 +111,11 @@ export default async function PedidosZonaSurPage() {
                         Ver comprobante
                       </a>
                     )}
+                    {Number(pedido.descuento) > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Incluye descuento por efectivo (−${Number(pedido.descuento).toLocaleString("es-AR")})
+                      </div>
+                    )}
                     {pedido.pagaCon != null && (
                       <div className="text-xs text-muted-foreground">
                         Paga con ${Number(pedido.pagaCon).toLocaleString("es-AR")} — vuelto $

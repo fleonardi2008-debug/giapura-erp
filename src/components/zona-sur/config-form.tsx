@@ -28,12 +28,26 @@ type Config = {
   puntoBernalTexto: string | null;
   colegioNombre: string | null;
   colegioDias: string | null;
+  frascosSueltos: boolean;
+  descuentoEfectivo: number;
   andreaniActivo: boolean;
   andreaniTexto: string | null;
   andreaniTarifas: string | null;
 };
 
-export function ZonaSurConfigForm({ config }: { config: Config }) {
+type Producto = {
+  id: string;
+  nombre: string;
+  esPack: boolean;
+  precioOnline: number | null;
+  precioZonaSur: number | null;
+};
+
+function plata(n: number) {
+  return `$${n.toLocaleString("es-AR")}`;
+}
+
+export function ZonaSurConfigForm({ config, productos }: { config: Config; productos: Producto[] }) {
   const [lat, setLat] = useState(config.zonaCentroLat);
   const [lng, setLng] = useState(config.zonaCentroLng);
   const [radioKm, setRadioKm] = useState(config.zonaRadioKm);
@@ -79,6 +93,82 @@ export function ZonaSurConfigForm({ config }: { config: Config }) {
 
   return (
     <form action={handleSubmit} className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Productos</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="frascosSueltos" defaultChecked={config.frascosSueltos} className="size-4" />
+            Ofrecer también frascos sueltos (además de los packs)
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Aparecen los frascos activos que tengan precio, debajo de los packs. Antes de prender esto, revisá los
+            precios de abajo.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Precios de Zona Sur</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="descuentoEfectivo">Descuento por pagar en efectivo (%)</Label>
+            <Input
+              id="descuentoEfectivo"
+              name="descuentoEfectivo"
+              type="number"
+              min="0"
+              max="50"
+              step="1"
+              defaultValue={config.descuentoEfectivo}
+              className="max-w-32"
+            />
+            <p className="text-xs text-muted-foreground">
+              Se descuenta de los productos (no del envío) y se redondea a los $100. Con 10%, un precio de $16.120
+              queda en $14.500 en efectivo. Poné 0 para no ofrecer descuento. La página muestra el precio en efectivo
+              y avisa del descuento.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Precio de cada producto en la página (el que paga con transferencia)</p>
+            <div className="divide-y divide-border rounded-lg border border-border">
+              {productos.length === 0 && (
+                <p className="p-4 text-sm text-muted-foreground">No hay productos activos.</p>
+              )}
+              {productos.map((p) => (
+                <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">{p.nombre}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {p.esPack ? "Pack" : "Frasco suelto"} ·{" "}
+                      {p.precioOnline != null ? `precio online ${plata(p.precioOnline)}` : "sin precio online"}
+                    </div>
+                  </div>
+                  <Input
+                    name={`precio_${p.id}`}
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={p.precioZonaSur ?? ""}
+                    placeholder={p.precioOnline != null ? `${p.precioOnline} (online)` : "Sin precio"}
+                    aria-label={`Precio en Zona Sur de ${p.nombre}`}
+                    className="w-40"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Si dejás un casillero vacío, se usa el precio online de ese producto. Cambiar estos precios no toca la
+              tienda online ni tus márgenes del módulo de Productos.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Zona de envío</CardTitle>

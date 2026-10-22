@@ -8,6 +8,7 @@ import { getSession } from "@/lib/session";
 import { ZonaSurEstado, ZonaSurMetodoEntrega, ZonaSurMetodoPago } from "@/generated/prisma/client";
 import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
 import { parsearTarifasAndreani } from "@/lib/zona-sur-andreani";
+import { descuentoEfectivo } from "@/lib/zona-sur-precios";
 
 async function requireOwner() {
   const session = await getSession();
@@ -32,9 +33,11 @@ const configSchema = z.object({
   colegioDias: z.string().optional(),
   andreaniTexto: z.string().optional(),
   andreaniTarifas: z.string().optional(),
+  descuentoEfectivo: z.coerce.number().int("Tiene que ser un número entero").min(0, "No puede ser negativo").max(50, "El descuento en efectivo no puede pasar del 50%"),
 });
 
 export async function guardarZonaSurConfig(formData: FormData) {
+  // (los interruptores sin tildar no viajan en el formulario: ausente = apagado)
   await requireOwner();
 
   const parsed = configSchema.safeParse({
@@ -51,10 +54,28 @@ export async function guardarZonaSurConfig(formData: FormData) {
     colegioDias: formData.get("colegioDias") ?? "",
     andreaniTexto: formData.get("andreaniTexto") ?? "",
     andreaniTarifas: formData.get("andreaniTarifas") ?? "",
+    descuentoEfectivo: formData.get("descuentoEfectivo") || 0,
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  // Precios de Zona Sur por producto: campos "precio_<id del producto>". Vacío = usar el precio online.
+  const preciosZonaSur: { id: string; precio: number | null }[] = [];
+  for (const [clave, valor] of formData.entries()) {
+    if (!clave.startsWith("precio_") || typeof valor !== "string") continue;
+    const id = clave.slice("precio_".length);
+    const texto = valor.trim();
+    if (!texto) {
+      preciosZonaSur.push({ id, precio: null });
+      continue;
+    }
+    const numero = Number(texto.replace(/\./g, "").replace(",", "."));
+    if (!Number.isFinite(numero) || numero <= 0) {
+      return { error: `El precio "${texto}" no es válido. Escribí solo el número (ej: 6670).` };
+    }
+    preciosZonaSur.push({ id, precio: numero });
   }
 
   // Si una línea de la tabla de precios está mal escrita, se avisa cuál en vez de guardarla rota.
@@ -70,13 +91,20 @@ export async function guardarZonaSurConfig(formData: FormData) {
     ...parsed.data,
     colegioDias: parsearDiasColegio(parsed.data.colegioDias).join("\n"),
     andreaniActivo: formData.get("andreaniActivo") === "on",
+    frascosSueltos: formData.get("frascosSueltos") === "on",
   };
 
-  await prisma.zonaSurConfig.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
-  });
+  // Config y precios se guardan juntos: o entra todo o no entra nada.
+  await prisma.$transaction([
+    prisma.zonaSurConfig.upsert({
+      where: { id: "singleton" },
+      create: { id: "singleton", ...data },
+      update: data,
+    }),
+    ...preciosZonaSur.map(({ id, precio }) =>
+      prisma.sku.updateMany({ where: { id }, data: { precioZonaSur: precio } })
+    ),
+  ]);
 
   revalidatePath("/pedidos-zona-sur/config");
   revalidatePath("/pedidos-zona-sur/colegio");
@@ -250,8 +278,14 @@ export async function crearZonaSurPedido(formData: FormData) {
   });
   const itemsParaCrear = data.items.map((item) => {
     const sku = skus.find((s) => s.id === item.skuId);
-    if (!sku || !sku.precioVenta) throw new Error("Uno de los productos elegidos ya no está disponible");
-    const precioUnitario = Number(sku.precioVenta);
+    // Precio de Zona Sur si está cargado; si no, el precio online de siempre.
+    const precioBase = sku?.precioZonaSur ?? sku?.precioVenta;
+    if (!sku || !precioBase) throw new Error("Uno de los productos elegidos ya no está disponible");
+    // Los frascos sueltos solo se pueden pedir si están habilitados en la configuración.
+    if (sku.nivel !== "PACK" && !config.frascosSueltos) {
+      throw new Error("Uno de los productos elegidos ya no está disponible");
+    }
+    const precioUnitario = Number(precioBase);
     return {
       skuId: sku.id,
       nombre: sku.nombre,
@@ -261,7 +295,10 @@ export async function crearZonaSurPedido(formData: FormData) {
     };
   });
 
-  let total = itemsParaCrear.reduce((acc, i) => acc + i.subtotal, 0);
+  const totalProductos = itemsParaCrear.reduce((acc, i) => acc + i.subtotal, 0);
+  // El descuento por pagar en efectivo es sobre los productos (no sobre el envío).
+  const descuento = data.metodoPago === "EFECTIVO" ? descuentoEfectivo(totalProductos, config.descuentoEfectivo) : 0;
+  let total = totalProductos - descuento;
   if (data.metodoEntrega === "ENVIO_ZONA") total += Number(config.zonaPrecio);
 
   if (data.metodoPago === "EFECTIVO" && (!data.pagaCon || data.pagaCon < total)) {
@@ -289,6 +326,7 @@ export async function crearZonaSurPedido(formData: FormData) {
       metodoPago: data.metodoPago,
       comprobanteUrl,
       pagaCon: data.metodoPago === "EFECTIVO" ? data.pagaCon : null,
+      descuento,
       total,
       items: { create: itemsParaCrear },
     },

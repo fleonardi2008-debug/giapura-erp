@@ -148,6 +148,9 @@ model Sku {
   // Venta mayorista (tienda física, a través de un distribuidor): precio propio,
   // el costo usa el mismo costoTotal calculado (sin packaging de envío/combo).
   precioVentaMayorista Decimal? @db.Decimal(14, 2)
+  // Precio de la página de Zona Sur (/zona-sur). Si está vacío se usa precioVenta (el online).
+  // Se carga desde Pedidos Zona Sur → Configurar.
+  precioZonaSur Decimal? @db.Decimal(14, 2)
   // Costo de referencia del canal online cuando incluye packaging que el costeo
   // normal no contempla (ej: va en la caja combo aunque se venda un solo frasco).
   // Es un número fijo que se carga a mano, no se recalcula con la receta.
@@ -588,6 +591,8 @@ model ZonaSurConfig {
   puntoBernalTexto  String?
   colegioNombre     String? // ej: "Colegio San José, puerta principal, 12:30hs"
   colegioDias       String? // un día por línea (ej: "Martes 21/10"); se actualiza semana a semana
+  frascosSueltos    Boolean  @default(false) // si está prendido, además de los packs se ofrecen frascos sueltos
+  descuentoEfectivo Int      @default(0) // % de descuento sobre los productos si paga en efectivo (0 = sin descuento)
   andreaniActivo    Boolean  @default(false) // si está apagado, la opción no aparece en la página
   andreaniTexto     String? // aclaración para el cliente, ej: "El costo del envío lo ves antes de pagar"
   andreaniTarifas   String? // tabla de precios aproximados por código postal, una regla por línea (ej: "1800-1999 = 6500")
@@ -607,6 +612,7 @@ model ZonaSurPedido {
   metodoPago     ZonaSurMetodoPago
   comprobanteUrl String? // solo si metodoPago = TRANSFERENCIA
   pagaCon        Decimal?             @db.Decimal(14, 2) // solo si metodoPago = EFECTIVO, para saber cuánto vuelto llevar
+  descuento      Decimal              @default(0) @db.Decimal(14, 2) // descuento por pagar en efectivo, ya restado del total
   total          Decimal              @db.Decimal(14, 2)
   estado         ZonaSurEstado        @default(PENDIENTE)
   nota           String?

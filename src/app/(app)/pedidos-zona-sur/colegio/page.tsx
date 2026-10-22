@@ -110,6 +110,7 @@ export default async function ColegioPage() {
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {pedido.clienteTelefono} · {efectivo ? `Efectivo ${plata(Number(pedido.total))}` : "Transferencia"}
+                          {Number(pedido.descuento) > 0 && <> (con {plata(Number(pedido.descuento))} de descuento)</>}
                           {efectivo && pedido.pagaCon != null && (
                             <> · paga con {plata(Number(pedido.pagaCon))}, vuelto {plata(Number(pedido.pagaCon) - Number(pedido.total))}</>
                           )}

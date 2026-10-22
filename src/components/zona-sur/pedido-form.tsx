@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { crearZonaSurPedido } from "@/lib/actions/zona-sur";
 import { estimarEnvioAndreani, numeroDeCodigoPostal, type TarifaAndreani } from "@/lib/zona-sur-andreani";
+import { descuentoEfectivo as descuentoEnEfectivo, precioEnEfectivo } from "@/lib/zona-sur-precios";
 import { cn } from "@/lib/utils";
 
 const MapaZona = dynamic(() => import("./mapa-zona").then((m) => m.MapaZona), {
@@ -15,7 +16,7 @@ const MapaZona = dynamic(() => import("./mapa-zona").then((m) => m.MapaZona), {
   loading: () => <div className="h-64 animate-pulse rounded-xl bg-muted" />,
 });
 
-type Sku = { id: string; nombre: string; precioVenta: number; imagenUrl: string | null };
+type Sku = { id: string; nombre: string; precioVenta: number; imagenUrl: string | null; esPack: boolean };
 type Config = {
   zonaNombre: string;
   zonaCentroLat: number;
@@ -31,6 +32,7 @@ type Config = {
   andreaniActivo: boolean;
   andreaniTexto: string | null;
   andreaniTarifas: TarifaAndreani[];
+  descuentoEfectivo: number;
 };
 
 type MetodoEntrega = "ENVIO_ZONA" | "PUNTO_QUILMES" | "PUNTO_BERNAL" | "COLEGIO" | "ANDREANI";
@@ -82,13 +84,17 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
   const hayQuilmes = !!config.puntoQuilmesTexto?.trim();
   const hayBernal = !!config.puntoBernalTexto?.trim();
   const hayColegio = !!config.colegioNombre?.trim() && config.colegioDias.length > 0;
+  const hayFrascosSueltos = skus.some((s) => !s.esPack);
 
   const subtotal = useMemo(
     () => skus.reduce((acc, s) => acc + (cantidades[s.id] ?? 0) * s.precioVenta, 0),
     [skus, cantidades]
   );
   // El envío por Andreani no suma acá: se paga aparte, directo a Andreani.
-  const totalConEnvio = subtotal + (metodoEntrega === "ENVIO_ZONA" ? config.zonaPrecio : 0);
+  // El descuento por pagar en efectivo es sobre los productos (no sobre el envío).
+  const descuento = metodoPago === "EFECTIVO" ? descuentoEnEfectivo(subtotal, config.descuentoEfectivo) : 0;
+  const totalConEnvio = subtotal - descuento + (metodoEntrega === "ENVIO_ZONA" ? config.zonaPrecio : 0);
+  const hayDescuentoEfectivo = config.descuentoEfectivo > 0;
   const hayProductos = Object.values(cantidades).some((c) => c > 0);
 
   const estimadoAndreani = estimarEnvioAndreani(config.andreaniTarifas, cpEstimado);
@@ -112,7 +118,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
 
   function handleSubmit(formData: FormData) {
     if (!hayProductos) {
-      toast.error("Elegí al menos un pack");
+      toast.error(hayFrascosSueltos ? "Elegí al menos un producto" : "Elegí al menos un pack");
       return;
     }
     if (metodoEntrega === "COLEGIO" && !colegioDia) {
@@ -177,27 +183,41 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
         />
         <p className="gia-mano mt-1 text-2xl text-[var(--muted-foreground)]">Pedidos Zona Sur</p>
         <p className="mt-2 text-[var(--muted-foreground)]">
-          Elegí tu pack, cómo lo recibís y cómo pagás. Coordinamos el resto por WhatsApp.
+          {hayFrascosSueltos ? "Elegí tus productos" : "Elegí tu pack"}, cómo lo recibís y cómo pagás. Coordinamos el resto
+          por WhatsApp.
         </p>
       </header>
 
       {/* Productos */}
       <section className="space-y-3">
         <p className="text-center text-sm font-semibold tracking-wide text-[var(--muted-foreground)] uppercase">
-          1. Elegí tu pack
+          {hayFrascosSueltos ? "1. Elegí tus productos" : "1. Elegí tu pack"}
         </p>
-        <h2 className="text-center text-3xl">Dos frascos, tu combinación</h2>
+        <h2 className="text-center text-3xl">
+          {hayFrascosSueltos ? "Packs de dos frascos o frascos sueltos" : "Dos frascos, tu combinación"}
+        </h2>
+        {hayDescuentoEfectivo && (
+          <p className="mx-auto w-fit rounded-full bg-[var(--muted)] px-4 py-1.5 text-center text-sm font-medium">
+            Pagando en efectivo tenés {config.descuentoEfectivo}% de descuento
+          </p>
+        )}
         {skus.length === 0 && (
           <p className="text-sm text-[var(--muted-foreground)]">
             Todavía no hay productos cargados. (Se cargan en Productos (SKU) del panel.)
           </p>
         )}
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {skus.map((sku) => {
+          {skus.map((sku, idx) => {
             const cantidad = cantidades[sku.id] ?? 0;
+            const primerSuelto = !sku.esPack && (idx === 0 || skus[idx - 1].esPack);
             return (
+              <Fragment key={sku.id}>
+                {primerSuelto && (
+                  <h3 className="col-span-full pt-2 text-center text-2xl">
+                    {idx === 0 ? "Frascos" : "O un frasco suelto"}
+                  </h3>
+                )}
               <div
-                key={sku.id}
                 className={cn(
                   "flex flex-col gap-3 rounded-2xl border-2 bg-[var(--card)] p-4 text-center transition-colors",
                   cantidad > 0 ? "border-[var(--primary)]" : "border-[var(--border)]"
@@ -214,7 +234,14 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
                   )}
                 </div>
                 <h3 className="gia-pack-nombre text-xl">{sku.nombre}</h3>
-                <p className="text-lg font-semibold">{moneyAR(sku.precioVenta)}</p>
+                <div>
+                  <p className="text-lg font-semibold">{moneyAR(sku.precioVenta)}</p>
+                  {hayDescuentoEfectivo && (
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      En efectivo: <strong>{moneyAR(precioEnEfectivo(sku.precioVenta, config.descuentoEfectivo))}</strong>
+                    </p>
+                  )}
+                </div>
                 <div className="mt-auto flex items-center justify-center gap-4">
                   <Button type="button" variant="outline" size="icon-sm" onClick={() => cambiarCantidad(sku.id, -1)}>
                     −
@@ -225,6 +252,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
                   </Button>
                 </div>
               </div>
+              </Fragment>
             );
           })}
         </div>
@@ -348,7 +376,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
             <span className="text-sm text-[var(--muted-foreground)]">
               {metodoEntrega === "ANDREANI"
                 ? "No disponible con envío por Andreani: solo transferencia."
-                : "Se paga al recibir o retirar."}
+                : `Se paga al recibir o retirar.${hayDescuentoEfectivo ? ` ${config.descuentoEfectivo}% de descuento.` : ""}`}
             </span>
           </TarjetaOpcion>
         </div>
@@ -408,7 +436,14 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
 
       <div className="flex items-center justify-between rounded-2xl bg-[var(--muted)] px-4 py-3">
         <span className="font-medium">Total</span>
-        <span className="text-xl font-semibold">{moneyAR(totalConEnvio)}</span>
+        <span className="text-right">
+          {descuento > 0 && (
+            <span className="block text-sm text-[var(--muted-foreground)]">
+              Incluye {config.descuentoEfectivo}% de descuento por pagar en efectivo (−{moneyAR(descuento)})
+            </span>
+          )}
+          <span className="text-xl font-semibold">{moneyAR(totalConEnvio)}</span>
+        </span>
       </div>
 
       <Button type="submit" size="lg" disabled={pending} className="w-full">
