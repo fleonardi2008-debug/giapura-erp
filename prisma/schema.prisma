@@ -592,7 +592,7 @@ model ZonaSurConfig {
   colegioNombre     String? // ej: "Colegio San José, puerta principal, 12:30hs"
   colegioDias       String? // un día por línea (ej: "Martes 21/10"); se actualiza semana a semana
   frascosSueltos    Boolean  @default(false) // si está prendido, además de los packs se ofrecen frascos sueltos
-  descuentoEfectivo Int      @default(0) // % de descuento sobre los productos si paga en efectivo (0 = sin descuento)
+  descuentoEfectivo Int      @default(10) // % de descuento sobre los productos si paga en efectivo (0 = sin descuento)
   andreaniActivo    Boolean  @default(false) // si está apagado, la opción no aparece en la página
   andreaniTexto     String? // aclaración para el cliente, ej: "El costo del envío lo ves antes de pagar"
   andreaniTarifas   String? // tabla de precios aproximados por código postal, una regla por línea (ej: "1800-1999 = 6500")

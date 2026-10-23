@@ -39,8 +39,6 @@ export default async function ZonaSurPage() {
           zonaPrecio: Number(config.zonaPrecio),
           cbuAlias: config.cbuAlias,
           titularCuenta: config.titularCuenta,
-          puntoQuilmesTexto: config.puntoQuilmesTexto,
-          puntoBernalTexto: config.puntoBernalTexto,
           colegioNombre: config.colegioNombre,
           colegioDias: parsearDiasColegio(config.colegioDias),
           descuentoEfectivo: config.descuentoEfectivo,

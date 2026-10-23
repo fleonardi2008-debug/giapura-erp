@@ -245,16 +245,11 @@ export async function crearZonaSurPedido(formData: FormData) {
     return { error: "Por ahora no hacemos envíos por Andreani. Probá con otra forma de entrega." };
   }
 
-  // El punto de encuentro elegido tiene que existir todavia (no vacio) y se
-  // congela el texto tal cual esta hoy, por si Fran lo cambia despues.
-  let puntoElegido: string | null = null;
-  if (data.metodoEntrega === "PUNTO_QUILMES") {
-    if (!config.puntoQuilmesTexto?.trim()) return { error: "Por ahora no hay un punto de encuentro en Quilmes. Probá con envío o con Bernal." };
-    puntoElegido = config.puntoQuilmesTexto;
-  } else if (data.metodoEntrega === "PUNTO_BERNAL") {
-    if (!config.puntoBernalTexto?.trim()) return { error: "Por ahora no hay un punto de encuentro en Bernal. Probá con envío o con Quilmes." };
-    puntoElegido = config.puntoBernalTexto;
+  // Los retiros en puntos de encuentro (Quilmes y Bernal) ya no se ofrecen.
+  if (data.metodoEntrega === "PUNTO_QUILMES" || data.metodoEntrega === "PUNTO_BERNAL") {
+    return { error: "Ya no hacemos retiros en puntos de encuentro. Elegí otra forma de entrega." };
   }
+  let puntoElegido: string | null = null;
 
   // Colegio: el día tiene que ser uno de los que están ofrecidos hoy. Se guarda el día
   // tal cual figuraba y, en puntoElegido, el lugar + el día (así lo muestran etiquetas y lista).

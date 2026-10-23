@@ -248,37 +248,6 @@ export function ZonaSurConfigForm({ config, productos }: { config: Config; produ
 
       <Card>
         <CardHeader>
-          <CardTitle>Puntos de encuentro de esta semana</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="puntoQuilmesTexto">Quilmes</Label>
-            <Textarea
-              id="puntoQuilmesTexto"
-              name="puntoQuilmesTexto"
-              rows={3}
-              defaultValue={config.puntoQuilmesTexto ?? ""}
-              placeholder="Ej: Jueves 25/9, 18 a 20hs, Rivadavia y Alsina"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="puntoBernalTexto">Bernal</Label>
-            <Textarea
-              id="puntoBernalTexto"
-              name="puntoBernalTexto"
-              rows={3}
-              defaultValue={config.puntoBernalTexto ?? ""}
-              placeholder="Ej: Sábado 27/9, 10 a 12hs, plaza principal"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground sm:col-span-2">
-            Dejá el campo vacío si esa semana no ofrecés ese punto: no va a aparecer como opción en la página.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle>Entrega en el colegio</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">

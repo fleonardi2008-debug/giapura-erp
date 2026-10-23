@@ -25,8 +25,6 @@ type Config = {
   zonaPrecio: number;
   cbuAlias: string | null;
   titularCuenta: string | null;
-  puntoQuilmesTexto: string | null;
-  puntoBernalTexto: string | null;
   colegioNombre: string | null;
   colegioDias: string[];
   andreaniActivo: boolean;
@@ -35,7 +33,7 @@ type Config = {
   descuentoEfectivo: number;
 };
 
-type MetodoEntrega = "ENVIO_ZONA" | "PUNTO_QUILMES" | "PUNTO_BERNAL" | "COLEGIO" | "ANDREANI";
+type MetodoEntrega = "ENVIO_ZONA" | "COLEGIO" | "ANDREANI";
 type MetodoPago = "TRANSFERENCIA" | "EFECTIVO";
 
 function moneyAR(n: number) {
@@ -81,8 +79,6 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
   const [pending, startTransition] = useTransition();
   const [enviado, setEnviado] = useState(false);
 
-  const hayQuilmes = !!config.puntoQuilmesTexto?.trim();
-  const hayBernal = !!config.puntoBernalTexto?.trim();
   const hayColegio = !!config.colegioNombre?.trim() && config.colegioDias.length > 0;
   const hayFrascosSueltos = skus.some((s) => !s.esPack);
 
@@ -277,14 +273,6 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
             <span className="font-medium">Envío a domicilio — {moneyAR(config.zonaPrecio)}</span>
             <span className="text-sm text-[var(--muted-foreground)]">Válido dentro del círculo marcado en el mapa.</span>
           </TarjetaOpcion>
-          <TarjetaOpcion activo={metodoEntrega === "PUNTO_QUILMES"} onClick={() => setMetodoEntrega("PUNTO_QUILMES")} disabled={!hayQuilmes}>
-            <span className="font-medium">Retiro en Quilmes {!hayQuilmes && "(sin punto esta semana)"}</span>
-            {hayQuilmes && <span className="whitespace-pre-line text-sm text-[var(--muted-foreground)]">{config.puntoQuilmesTexto}</span>}
-          </TarjetaOpcion>
-          <TarjetaOpcion activo={metodoEntrega === "PUNTO_BERNAL"} onClick={() => setMetodoEntrega("PUNTO_BERNAL")} disabled={!hayBernal}>
-            <span className="font-medium">Retiro en Bernal {!hayBernal && "(sin punto esta semana)"}</span>
-            {hayBernal && <span className="whitespace-pre-line text-sm text-[var(--muted-foreground)]">{config.puntoBernalTexto}</span>}
-          </TarjetaOpcion>
           {hayColegio && (
             <TarjetaOpcion activo={metodoEntrega === "COLEGIO"} onClick={() => setMetodoEntrega("COLEGIO")}>
               <span className="font-medium">Retiro en el colegio</span>
@@ -395,6 +383,10 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
 
         {metodoPago === "EFECTIVO" && (
           <div className="space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+            <p className="text-sm">
+              Total a pagar en efectivo: <strong>{moneyAR(totalConEnvio)}</strong>
+              {descuento > 0 && <> (ya con el {config.descuentoEfectivo}% de descuento incluido)</>}
+            </p>
             <Label htmlFor="pagaCon">¿Con cuánto pagás?</Label>
             <Input
               id="pagaCon"
