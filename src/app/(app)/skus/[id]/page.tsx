@@ -296,7 +296,7 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
         </CardContent>
       </Card>
 
-      {!esPack && (sku.precioVentaMayorista || sku.costoReferenciaOnline) && (
+      {((!esPack && (sku.precioVentaMayorista || sku.costoReferenciaOnline)) || sku.precioZonaSur) && (
         <Card>
           <CardHeader>
             <CardTitle>Venta por canal</CardTitle>
@@ -313,6 +313,20 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {sku.precioZonaSur && (
+                  <TableRow>
+                    <TableCell className="font-medium">Zona Sur (directo)</TableCell>
+                    <TableCell>{fmt(sku.precioZonaSur)}</TableCell>
+                    <TableCell>{fmt(costo.costoTotal)}</TableCell>
+                    <TableCell>{fmt(sku.precioZonaSur.minus(costo.costoTotal))}</TableCell>
+                    <TableCell>
+                      {sku.precioZonaSur.gt(0)
+                        ? `${sku.precioZonaSur.minus(costo.costoTotal).dividedBy(sku.precioZonaSur).times(100).toFixed(1)}%`
+                        : "—"}
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!esPack && (
                 <TableRow>
                   <TableCell className="font-medium">Tienda online (directo)</TableCell>
                   <TableCell>{fmt(costo.precioVenta)}</TableCell>
@@ -334,6 +348,8 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
                     );
                   })()}
                 </TableRow>
+                )}
+                {!esPack && (
                 <TableRow>
                   <TableCell className="font-medium">Tienda física (mayorista)</TableCell>
                   <TableCell>{fmt(sku.precioVentaMayorista)}</TableCell>
@@ -349,6 +365,7 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
                     );
                   })()}
                 </TableRow>
+                )}
               </TableBody>
             </Table>
             <p className="mt-3 text-xs text-muted-foreground">
