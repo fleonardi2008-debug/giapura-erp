@@ -96,6 +96,8 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
   const totalConEnvio = subtotal - descuento + (metodoEntrega === "ENVIO_ZONA" ? config.zonaPrecio : 0);
   const hayDescuentoEfectivo = config.descuentoEfectivo > 0;
   const hayProductos = Object.values(cantidades).some((c) => c > 0);
+  // Las cajas de Andreani son de a dos: por ese medio solo se piden packs, no frascos sueltos.
+  const soloPacks = metodoEntrega === "ANDREANI";
 
   const estimadoAndreani = estimarEnvioAndreani(config.andreaniTarifas, cpEstimado);
   const mensajeEstimado = !cpEstimado.trim()
@@ -110,6 +112,8 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
   function elegirAndreani() {
     setMetodoEntrega("ANDREANI");
     setMetodoPago("TRANSFERENCIA");
+    // Si había frascos sueltos elegidos, se sacan: por Andreani van solo packs.
+    setCantidades((c) => Object.fromEntries(Object.entries(c).map(([id, n]) => [id, skus.find((s) => s.id === id)?.esPack ? n : 0])));
   }
 
   function cambiarCantidad(skuId: string, delta: number) {
@@ -220,7 +224,8 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
               <div
                 className={cn(
                   "flex flex-col gap-3 rounded-2xl border-2 bg-[var(--card)] p-4 text-center transition-colors",
-                  cantidad > 0 ? "border-[var(--primary)]" : "border-[var(--border)]"
+                  cantidad > 0 ? "border-[var(--primary)]" : "border-[var(--border)]",
+                  soloPacks && !sku.esPack && "opacity-50"
                 )}
               >
                 <div className="relative aspect-square overflow-hidden rounded-xl bg-[var(--muted)]">
@@ -247,7 +252,13 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
                     −
                   </Button>
                   <span className="w-4 text-center font-medium">{cantidad}</span>
-                  <Button type="button" variant="outline" size="icon-sm" onClick={() => cambiarCantidad(sku.id, 1)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    disabled={soloPacks && !sku.esPack}
+                    onClick={() => cambiarCantidad(sku.id, 1)}
+                  >
                     +
                   </Button>
                 </div>
@@ -293,6 +304,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
 
         {metodoEntrega === "ANDREANI" && config.andreaniActivo && (
           <ol className="list-decimal space-y-1 rounded-2xl border border-[var(--border)] bg-[var(--card)] py-3 pl-9 pr-4 text-sm">
+            <li>Elegí tus packs (las cajas de envío son de a dos, no hay frascos sueltos por Andreani).</li>
             <li>Pagás los productos por transferencia y subís el comprobante.</li>
             <li>Te mandamos por WhatsApp un link de Andreani.</li>
             <li>En ese link completás tu dirección y pagás el envío a Andreani.</li>

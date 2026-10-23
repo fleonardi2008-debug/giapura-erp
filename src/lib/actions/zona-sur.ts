@@ -295,6 +295,11 @@ export async function crearZonaSurPedido(formData: FormData) {
     };
   });
 
+  // Las cajas de Andreani son de a dos: por ese medio solo se piden packs.
+  if (data.metodoEntrega === "ANDREANI" && skus.some((s) => s.nivel !== "PACK")) {
+    return { error: "Para envíos por Andreani solo se pueden pedir packs (las cajas son de a dos)" };
+  }
+
   const totalProductos = itemsParaCrear.reduce((acc, i) => acc + i.subtotal, 0);
   // El descuento por pagar en efectivo es sobre los productos (no sobre el envío).
   const descuento = data.metodoPago === "EFECTIVO" ? descuentoEfectivo(totalProductos, config.descuentoEfectivo) : 0;
