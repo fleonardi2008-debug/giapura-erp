@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState, useTransition } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { crearZonaSurPedido } from "@/lib/actions/zona-sur";
 import { estimarEnvioAndreani, numeroDeCodigoPostal, type TarifaAndreani } from "@/lib/zona-sur-andreani";
 import { descuentoEfectivo as descuentoEnEfectivo, precioEnEfectivo } from "@/lib/zona-sur-precios";
+import { distanciaKm, ubicarDireccion, type Punto } from "@/lib/zona-sur-geo";
 import { cn } from "@/lib/utils";
 
 const MapaZona = dynamic(() => import("./mapa-zona").then((m) => m.MapaZona), {
@@ -47,11 +48,18 @@ type Config = {
 };
 
 type MetodoEntrega = "ENVIO_ZONA" | "COLEGIO" | "ANDREANI";
+/** Resultado de ubicar la dirección del cliente en el mapa de la zona de envío. */
+type Verificacion = {
+  direccion: string;
+  estado: "ok" | "fuera" | "noencontrada" | "error";
+  punto?: Punto;
+  km?: number;
+};
 type MetodoPago = "TRANSFERENCIA" | "EFECTIVO";
 
 // Campos y botones pensados para el pulgar: 48 px de alto y letra de 16 px (evita el zoom automatico en iPhone).
 const CAMPO = "h-12 text-base";
-const BOTON_CANTIDAD = "size-11 rounded-xl text-xl";
+const BOTON_CANTIDAD = "size-11 rounded-full border-transparent bg-[var(--card)] text-xl shadow-sm transition-transform duration-150 active:scale-90";
 
 function moneyAR(n: number) {
   return n.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
@@ -76,12 +84,70 @@ function TarjetaOpcion({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex min-h-14 w-full flex-col justify-center gap-1 rounded-2xl border-2 px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-        activo ? "border-[var(--primary)] bg-[var(--card)]" : "border-[var(--border)] bg-[var(--card)]/60 hover:border-[var(--muted-foreground)]"
+        "flex min-h-14 w-full items-start gap-3 rounded-2xl border bg-[var(--card)] px-4 py-3.5 text-left transition-all duration-200 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40",
+        activo
+          ? "border-[var(--primary)] shadow-[0_8px_24px_-14px_rgba(74,28,5,0.45)] ring-1 ring-[var(--primary)]"
+          : "border-[var(--border)] hover:border-[var(--muted-foreground)]/60"
       )}
     >
-      {children}
+      {/* Punto de selección: se llena con una pequeña animación */}
+      <span
+        aria-hidden
+        className={cn(
+          "mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-2 transition-colors duration-200",
+          activo ? "border-[var(--primary)]" : "border-[var(--border)]"
+        )}
+      >
+        <span
+          className={cn(
+            "size-2.5 rounded-full bg-[var(--primary)] transition-transform duration-200 ease-out",
+            activo ? "scale-100" : "scale-0"
+          )}
+        />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">{children}</span>
     </button>
+  );
+}
+
+/** Encabezado de cada paso: círculo con el número + título. */
+function Paso({ n, titulo, nota }: { n: number; titulo: string; nota?: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)]">
+        {n}
+      </span>
+      <div>
+        <h2 className="text-2xl leading-tight">{titulo}</h2>
+        {nota && <p className="text-sm text-[var(--muted-foreground)]">{nota}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Sección que aparece suavemente cuando llega a la pantalla (una sola vez). */
+function Revelar({ className, children }: { className?: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([entrada]) => {
+        if (entrada.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "0px 0px -8% 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <section ref={ref} data-visible={visible} className={cn("gia-revelar", className)}>
+      {children}
+    </section>
   );
 }
 
@@ -97,6 +163,13 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
   const [telefono, setTelefono] = useState("");
   const [pending, startTransition] = useTransition();
   const [enviado, setEnviado] = useState(false);
+  const [montado, setMontado] = useState(false);
+  const [verif, setVerif] = useState<Verificacion | null>(null);
+  const [verificando, setVerificando] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMontado(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   const hayColegio = !!config.colegioNombre?.trim() && config.colegioDias.length > 0;
   const hayFrascosSueltos = skus.some((s) => !s.esPack);
@@ -137,6 +210,37 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         ? "No tenemos un aproximado para ese código postal. Lo ves en el link de Andreani antes de pagar."
         : `Aproximadamente ${moneyAR(estimadoAndreani)}`;
 
+  const centroZona: Punto = { lat: config.zonaCentroLat, lng: config.zonaCentroLng };
+  const nombreZona = config.zonaPrecio > 0 ? "zona de envío a domicilio" : "zona de envío gratis";
+  // Solo vale el resultado si corresponde a lo que está escrito ahora.
+  const verifVigente = verif && verif.direccion === direccion.trim() ? verif : null;
+
+  async function verificarDireccion(texto: string): Promise<Verificacion | null> {
+    const limpio = texto.trim();
+    if (limpio.length < 5) return null;
+    if (verif && verif.direccion === limpio && verif.estado !== "error") return verif;
+    setVerificando(true);
+    const r = await ubicarDireccion(limpio, centroZona);
+    let v: Verificacion;
+    if (r.estado === "ok") {
+      const km = distanciaKm(centroZona, r.punto);
+      v = { direccion: limpio, estado: km <= config.zonaRadioKm ? "ok" : "fuera", punto: r.punto, km };
+    } else {
+      v = { direccion: limpio, estado: r.estado };
+    }
+    setVerif(v);
+    setVerificando(false);
+    return v;
+  }
+
+  function mensajeVerificacion(v: Verificacion | null) {
+    if (!v) return "Escribí tu dirección completa para verificar si está dentro de la zona de envío";
+    if (v.estado === "fuera")
+      return `Tu dirección queda fuera de la ${nombreZona}.${config.andreaniActivo ? " Elegí envío por Andreani." : " Escribinos y lo vemos."}`;
+    if (v.estado === "noencontrada") return "No pudimos ubicar esa dirección. Agregá la localidad (ej: Bernal) y probá de nuevo.";
+    return "No pudimos verificar tu dirección ahora. Probá de nuevo en un momento.";
+  }
+
   // Andreani solo admite transferencia: si había elegido efectivo, se pasa a transferencia.
   function elegirAndreani() {
     setMetodoEntrega("ANDREANI");
@@ -175,6 +279,17 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
     if (metodoEntrega === "COLEGIO") formData.set("colegioDia", colegioDia);
 
     startTransition(async () => {
+      // Envío a domicilio: la dirección tiene que caer dentro del círculo del mapa.
+      if (metodoEntrega === "ENVIO_ZONA") {
+        const v = await verificarDireccion(direccion);
+        if (!v || v.estado !== "ok" || !v.punto) {
+          toast.error(mensajeVerificacion(v));
+          document.getElementById("direccion")?.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+        formData.set("lat", String(v.punto.lat));
+        formData.set("lng", String(v.punto.lng));
+      }
       const result = await crearZonaSurPedido(formData);
       if (result?.error) {
         toast.error(result.error);
@@ -187,7 +302,11 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
   if (enviado) {
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="text-3xl font-semibold">¡Listo, {nombre.split(" ")[0]}!</h1>
+        <svg viewBox="0 0 52 52" className="gia-entra size-20" fill="none" aria-hidden>
+          <circle cx="26" cy="26" r="24" stroke="var(--primary)" strokeWidth="2" opacity="0.25" />
+          <path className="gia-check" d="M15 27l8 8 14-16" stroke="var(--primary)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <h1 className="gia-entra text-3xl font-semibold" style={{ "--d": "150ms" } as React.CSSProperties}>¡Listo, {nombre.split(" ")[0]}!</h1>
         <p className="text-[var(--muted-foreground)]">
           Recibimos tu pedido. Te vamos a escribir por WhatsApp o mail a{" "}
           <strong>{email}</strong> para coordinar{" "}
@@ -219,61 +338,72 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         <img
           src="/branding/giapura-logo.png"
           alt="Giapura"
-          className="mx-auto h-12 w-auto sm:h-16"
+          className="gia-entra mx-auto h-12 w-auto sm:h-16"
         />
-        <p className="gia-mano mt-1 text-2xl text-[var(--muted-foreground)]">Pedidos Zona Sur</p>
-        <p className="mt-2 text-sm text-[var(--muted-foreground)] sm:text-base">
+        <p
+          className="gia-entra gia-mano mt-1 text-2xl text-[var(--muted-foreground)]"
+          style={{ "--d": "100ms" } as React.CSSProperties}
+        >
+          Pedidos Zona Sur
+        </p>
+        <p
+          className="gia-entra mx-auto mt-2 max-w-md text-sm text-[var(--muted-foreground)] sm:text-base"
+          style={{ "--d": "200ms" } as React.CSSProperties}
+        >
           {hayFrascosSueltos ? "Elegí tus productos" : "Elegí tu pack"}, cómo lo recibís y cómo pagás. Coordinamos el resto
           por WhatsApp.
         </p>
+        {hayDescuentoEfectivo && (
+          <p
+            className="gia-entra mx-auto mt-4 w-fit rounded-full bg-[var(--accent)]/70 px-4 py-1.5 text-sm font-medium"
+            style={{ "--d": "300ms" } as React.CSSProperties}
+          >
+            Pagando en efectivo tenés {config.descuentoEfectivo}% de descuento
+          </p>
+        )}
       </header>
 
       {/* Productos */}
-      <section className="space-y-3">
-        <p className="text-center text-sm font-semibold tracking-wide text-[var(--muted-foreground)] uppercase">
-          {hayFrascosSueltos ? "1. Elegí tus productos" : "1. Elegí tu pack"}
-        </p>
-        <h2 className="text-center text-2xl sm:text-3xl">
-          {hayFrascosSueltos ? "Packs de dos frascos o frascos sueltos" : "Dos frascos, tu combinación"}
-        </h2>
+      <section className="space-y-5">
+        <Paso
+          n={1}
+          titulo={hayFrascosSueltos ? "Elegí tus productos" : "Elegí tu pack"}
+          nota={hayFrascosSueltos ? "Packs de dos frascos o frascos sueltos" : "Dos frascos, tu combinación"}
+        />
         {stock.length > 0 && (
-          <div className="mx-auto w-full max-w-md space-y-2.5 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3 sm:space-y-3 sm:p-4">
-            <p className="text-center text-sm font-medium">Stock para entrega en la zona</p>
+          <div className="space-y-3 px-1" role="group" aria-label="Stock para entrega en la zona">
             {stock.map((f) => {
               const vendido = Math.min(f.usado, f.total);
               const porcentaje = f.total > 0 ? Math.round((vendido / f.total) * 100) : 100;
+              const quedan = quedanSinCarrito(f);
               return (
-                <div key={f.id} className="space-y-1">
-                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                <div key={f.id}>
+                  <div className="flex items-baseline justify-between gap-2 text-[11px] tracking-[0.12em] text-[var(--muted-foreground)] uppercase">
                     <span>{f.nombre}</span>
-                    <span className="text-[var(--muted-foreground)]">
-                      {quedanSinCarrito(f) > 0 ? `quedan ${quedanSinCarrito(f)} de ${f.total}` : "agotado"}
-                    </span>
+                    <span className="tabular-nums">{quedan > 0 ? `quedan ${quedan}` : "agotado"}</span>
                   </div>
                   <div
-                    className="h-3 overflow-hidden rounded-full bg-[var(--muted)]"
+                    className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-[var(--border)]"
                     role="progressbar"
                     aria-label={`Stock vendido de ${f.nombre}`}
                     aria-valuemin={0}
                     aria-valuemax={f.total}
                     aria-valuenow={vendido}
                   >
-                    <div className="h-full rounded-full bg-[var(--primary)] transition-all" style={{ width: `${porcentaje}%` }} />
+                    <div
+                      className="h-full origin-left rounded-full bg-[var(--primary)] transition-transform delay-300 duration-1000 ease-out"
+                      style={{ width: `${porcentaje}%`, transform: montado ? "scaleX(1)" : "scaleX(0)" }}
+                    />
                   </div>
                 </div>
               );
             })}
             {config.andreaniActivo && (
-              <p className="text-center text-xs text-[var(--muted-foreground)]">
-                Por Andreani no hay tope: se despacha desde fábrica.
+              <p className="text-[11px] tracking-wide text-[var(--muted-foreground)]">
+                Entrega propia en la zona. Por Andreani siempre hay: sale de fábrica.
               </p>
             )}
           </div>
-        )}
-        {hayDescuentoEfectivo && (
-          <p className="mx-auto w-fit rounded-full bg-[var(--muted)] px-4 py-1.5 text-center text-sm font-medium">
-            Pagando en efectivo tenés {config.descuentoEfectivo}% de descuento
-          </p>
         )}
         {skus.length === 0 && (
           <p className="text-sm text-[var(--muted-foreground)]">
@@ -293,27 +423,47 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                 )}
               <div
                 className={cn(
-                  "flex flex-col gap-2 rounded-2xl border-2 bg-[var(--card)] p-2.5 text-center transition-colors sm:gap-3 sm:p-4",
-                  cantidad > 0 ? "border-[var(--primary)]" : "border-[var(--border)]",
+                  "gia-entra flex flex-col gap-2 rounded-3xl border bg-[var(--card)] p-2.5 text-center transition-all duration-300 sm:gap-3 sm:p-4",
+                  cantidad > 0
+                    ? "-translate-y-0.5 border-[var(--primary)] shadow-[0_14px_30px_-16px_rgba(74,28,5,0.5)] ring-1 ring-[var(--primary)]"
+                    : "border-[var(--border)] shadow-[0_1px_2px_rgba(74,28,5,0.05)]",
                   soloPacks && !sku.esPack && "opacity-50"
                 )}
+                style={{ "--d": `${Math.min(idx, 8) * 70}ms` } as React.CSSProperties}
               >
-                <div className="relative aspect-square overflow-hidden rounded-xl bg-[var(--muted)]">
+                <div className="group relative aspect-square overflow-hidden rounded-2xl bg-[var(--muted)]">
                   {sku.imagenUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={sku.imagenUrl} alt={sku.nombre} className="h-full w-full object-cover" style={{ objectPosition: sku.imagenPosicion, transform: `scale(${sku.imagenZoom})`, transformOrigin: sku.imagenPosicion }} />
+                    <img
+                      src={sku.imagenUrl}
+                      alt={sku.nombre}
+                      className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                      style={{
+                        objectPosition: sku.imagenPosicion,
+                        transform: `scale(${sku.imagenZoom})`,
+                        transformOrigin: sku.imagenPosicion,
+                      }}
+                    />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-[var(--muted-foreground)]">
                       giapura.
                     </div>
                   )}
+                  {cantidad > 0 && (
+                    <span
+                      key={cantidad}
+                      className="gia-pop absolute top-2 right-2 grid min-w-7 place-items-center rounded-full bg-[var(--primary)] px-2 py-0.5 text-sm font-semibold text-[var(--primary-foreground)] shadow-md"
+                    >
+                      ×{cantidad}
+                    </span>
+                  )}
                 </div>
                 <h3 className="gia-pack-nombre text-base leading-tight sm:text-xl">{sku.nombre}</h3>
                 <div>
-                  <p className="text-base font-semibold sm:text-lg">{moneyAR(sku.precioVenta)}</p>
+                  <p className="text-lg font-semibold sm:text-xl">{moneyAR(sku.precioVenta)}</p>
                   {hayDescuentoEfectivo && (
                     <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">
-                      En efectivo: <strong>{moneyAR(precioEnEfectivo(sku.precioVenta, config.descuentoEfectivo))}</strong>
+                      Efectivo <strong className="text-[var(--foreground)]">{moneyAR(precioEnEfectivo(sku.precioVenta, config.descuentoEfectivo))}</strong>
                     </p>
                   )}
                 </div>
@@ -323,7 +473,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                     {config.andreaniActivo && sku.esPack && cantidad === 0 && " (por Andreani sí)"}
                   </p>
                 )}
-                <div className="mt-auto flex items-center justify-between gap-1 sm:justify-center sm:gap-4">
+                <div className="mt-auto flex items-center justify-between rounded-full bg-[var(--muted)]/60 p-1">
                   <Button
                     type="button"
                     variant="outline"
@@ -334,7 +484,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                   >
                     −
                   </Button>
-                  <span className="min-w-6 text-center text-lg font-semibold" aria-live="polite">
+                  <span key={cantidad} className="gia-pop min-w-6 text-center text-lg font-semibold tabular-nums" aria-live="polite">
                     {cantidad}
                   </span>
                   <Button
@@ -356,12 +506,17 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
       </section>
 
       {/* Entrega */}
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">2. ¿Cómo lo recibís?</h2>
+      <Revelar className="space-y-4">
+        <Paso n={2} titulo="¿Cómo lo recibís?" />
         <div className="space-y-3" role="radiogroup" aria-label="Cómo lo recibís">
           <TarjetaOpcion activo={metodoEntrega === "ENVIO_ZONA"} onClick={() => setMetodoEntrega("ENVIO_ZONA")}>
-            <span className="font-medium">Envío a domicilio — {config.zonaPrecio > 0 ? moneyAR(config.zonaPrecio) : "Gratis"}</span>
-            <span className="text-sm text-[var(--muted-foreground)]">Válido dentro del círculo marcado en el mapa.</span>
+            <span className="flex flex-wrap items-center gap-2 font-medium">
+              Envío a domicilio
+              {config.zonaPrecio > 0 ? <>— {moneyAR(config.zonaPrecio)}</> : <span className="gia-gratis">Gratis</span>}
+            </span>
+            <span className="text-sm text-[var(--muted-foreground)]">
+              Válido dentro del círculo marcado en el mapa. Verificamos tu dirección.
+            </span>
           </TarjetaOpcion>
           {hayColegio && (
             <TarjetaOpcion activo={metodoEntrega === "COLEGIO"} onClick={() => setMetodoEntrega("COLEGIO")}>
@@ -381,7 +536,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         </div>
 
         {metodoEntrega === "ANDREANI" && config.andreaniActivo && (
-          <ol className="list-decimal space-y-1 rounded-2xl border border-[var(--border)] bg-[var(--card)] py-3 pl-9 pr-4 text-sm">
+          <ol className="gia-aparece list-decimal space-y-1 rounded-2xl border border-[var(--border)] bg-[var(--card)] py-3 pl-9 pr-4 text-sm">
             <li>Elegí tus packs (las cajas de envío son de a dos, no hay frascos sueltos por Andreani).</li>
             <li>Pagás los productos por transferencia y subís el comprobante.</li>
             <li>Te mandamos por WhatsApp un link de Andreani.</li>
@@ -390,7 +545,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         )}
 
         {metodoEntrega === "ANDREANI" && config.andreaniActivo && config.andreaniTarifas.length > 0 && (
-          <div className="space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+          <div className="gia-aparece space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
             <Label htmlFor="cpEstimado">Calculá tu envío aproximado</Label>
             <Input
               id="cpEstimado"
@@ -416,7 +571,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         )}
 
         {metodoEntrega === "COLEGIO" && hayColegio && (
-          <div className="space-y-2 pt-1">
+          <div className="gia-aparece space-y-2 pt-1">
             <p className="text-sm font-medium">¿Qué día te lo llevamos?</p>
             <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Día de entrega en el colegio">
               {config.colegioDias.map((dia) => (
@@ -432,10 +587,18 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         )}
 
         {metodoEntrega === "ENVIO_ZONA" && (
-          <div className="space-y-3 pt-1">
-            <MapaZona lat={config.zonaCentroLat} lng={config.zonaCentroLng} radioKm={config.zonaRadioKm} alto="16rem" />
+          <div className="gia-aparece space-y-3 pt-1">
+            <MapaZona
+              lat={config.zonaCentroLat}
+              lng={config.zonaCentroLng}
+              radioKm={config.zonaRadioKm}
+              alto="16rem"
+              mostrarCentro={false}
+              punto={verifVigente?.punto}
+            />
             <p className="text-xs text-[var(--muted-foreground)]">
-              Fijate si tu dirección cae dentro del círculo. Si no estás segura/o, escribinos igual y lo vemos.
+              {config.zonaPrecio > 0 ? "El envío llega" : "El envío gratis llega"} a las direcciones dentro del círculo.
+              Escribí la tuya y la verificamos.
             </p>
             <div className="space-y-2">
               <Label htmlFor="direccion">Dirección de entrega</Label>
@@ -446,16 +609,54 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                 placeholder="Calle, número, localidad"
                 autoComplete="street-address"
                 className={CAMPO}
+                onBlur={() => void verificarDireccion(direccion)}
+                aria-describedby="estado-direccion"
+                aria-invalid={verifVigente != null && verifVigente.estado !== "ok"}
                 required
               />
+              <div id="estado-direccion" aria-live="polite" className="space-y-2">
+                {verificando && (
+                  <p className="gia-aparece text-sm text-[var(--muted-foreground)]">Verificando tu dirección…</p>
+                )}
+                {!verificando && verifVigente?.estado === "ok" && (
+                  <p className="gia-aparece flex items-center gap-2 rounded-xl bg-[#e4eed6] px-3 py-2 text-sm font-medium text-[#2f5516]">
+                    <span aria-hidden>✓</span> Tu dirección está dentro de la {nombreZona}
+                  </p>
+                )}
+                {!verificando && verifVigente && verifVigente.estado !== "ok" && (
+                  <div
+                    role="alert"
+                    className="gia-aparece space-y-2 rounded-xl border border-[var(--destructive)]/40 bg-[var(--destructive)]/10 px-3 py-2.5 text-sm"
+                  >
+                    <p className="font-medium text-[var(--destructive)]">
+                      {verifVigente.estado === "fuera"
+                        ? `Tu dirección queda fuera de la ${nombreZona} (a ${verifVigente.km?.toFixed(1)} km del centro).`
+                        : mensajeVerificacion(verifVigente)}
+                    </p>
+                    {verifVigente.estado === "fuera" && config.andreaniActivo && (
+                      <>
+                        <p>Verificá la dirección o elegí envío por Andreani, que llega a todo el país.</p>
+                        <Button type="button" variant="outline" className="h-11" onClick={elegirAndreani}>
+                          Elegir envío por Andreani
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+                {!verificando && !verifVigente && direccion.trim().length >= 5 && (
+                  <Button type="button" variant="outline" className="h-11" onClick={() => void verificarDireccion(direccion)}>
+                    Verificar dirección
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
-      </section>
+      </Revelar>
 
       {/* Pago */}
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">3. ¿Cómo pagás?</h2>
+      <Revelar className="space-y-4">
+        <Paso n={3} titulo="¿Cómo pagás?" />
         <div className="space-y-3" role="radiogroup" aria-label="Cómo pagás">
           <TarjetaOpcion activo={metodoPago === "TRANSFERENCIA"} onClick={() => setMetodoPago("TRANSFERENCIA")}>
             <span className="font-medium">Transferencia</span>
@@ -475,7 +676,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         </div>
 
         {metodoPago === "EFECTIVO" && (
-          <div className="space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+          <div className="gia-aparece space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
             <p className="text-sm">
               Total a pagar en efectivo: <strong>{moneyAR(totalConEnvio)}</strong>
               {descuento > 0 && <> (ya con el {config.descuentoEfectivo}% de descuento incluido)</>}
@@ -497,7 +698,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         )}
 
         {metodoPago === "TRANSFERENCIA" && (
-          <div className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+          <div className="gia-aparece space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
             {config.cbuAlias ? (
               <p className="text-sm">
                 Transferí a: <strong>{config.cbuAlias}</strong>
@@ -512,11 +713,11 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
             </div>
           </div>
         )}
-      </section>
+      </Revelar>
 
       {/* Datos de contacto */}
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">4. Tus datos</h2>
+      <Revelar className="space-y-4">
+        <Paso n={4} titulo="Tus datos" />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="clienteNombre">Nombre y apellido</Label>
@@ -531,13 +732,16 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
             <Input id="clienteTelefono" name="clienteTelefono" type="tel" inputMode="tel" autoComplete="tel" className={CAMPO} value={telefono} onChange={(e) => setTelefono(e.target.value)} required />
           </div>
         </div>
-      </section>
+      </Revelar>
 
       {/* Barra fija abajo: el total y el boton siempre a mano, sin scrollear hasta el final. */}
-      <div className="sticky bottom-0 -mx-4 border-t border-[var(--border)] bg-[var(--background)]/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:mx-0 sm:rounded-t-2xl">
+      <div className="sticky bottom-0 -mx-4 rounded-t-3xl border-t border-[var(--border)] bg-[var(--background)]/90 px-5 pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-14px_32px_-18px_rgba(74,28,5,0.4)] backdrop-blur-md sm:mx-0">
         <div className="mb-2 flex items-end justify-between gap-3">
           <span className="text-sm text-[var(--muted-foreground)]">
             {unidadesTotales > 0 ? `${unidadesTotales} ${unidadesTotales === 1 ? "producto" : "productos"}` : "Tu pedido"}
+            {metodoEntrega === "ENVIO_ZONA" && config.zonaPrecio === 0 && (
+              <span className="block text-xs font-semibold text-[var(--primary)]">Envío gratis incluido</span>
+            )}
             {descuento > 0 && (
               <span className="block text-xs">
                 Incluye {config.descuentoEfectivo}% de descuento por efectivo (−{moneyAR(descuento)})
@@ -546,12 +750,12 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
           </span>
           <span className="text-right">
             <span className="block text-xs text-[var(--muted-foreground)]">Total</span>
-            <span className="text-2xl leading-none font-semibold" aria-live="polite">
+            <span key={totalConEnvio} className="gia-pop inline-block text-2xl leading-none font-semibold tabular-nums" aria-live="polite">
               {moneyAR(totalConEnvio)}
             </span>
           </span>
         </div>
-        <Button type="submit" size="lg" disabled={pending} className="h-12 w-full text-base">
+        <Button type="submit" size="lg" disabled={pending} className="h-12 w-full rounded-full text-base transition-transform duration-150 active:scale-[0.98]">
           {pending ? "Enviando..." : "Confirmar pedido"}
         </Button>
       </div>

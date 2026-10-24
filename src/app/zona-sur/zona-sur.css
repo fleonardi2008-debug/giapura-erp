@@ -23,7 +23,10 @@
   --ring: #6d2900;
   --radius: 0.9rem;
 
-  background: var(--background);
+  /* Luz cálida arriba que se funde con el crema de fondo */
+  background:
+    radial-gradient(120% 55% at 50% -8%, #f7ead0 0%, rgba(247, 234, 208, 0) 70%),
+    var(--background);
   color: var(--foreground);
   min-height: 100vh;
 }
@@ -50,4 +53,123 @@
 /* La barra fija de abajo (total + confirmar) no tiene que tapar el campo que se está completando. */
 html:has(.gia-zona-sur) {
   scroll-padding-bottom: 9rem;
+}
+
+/* ---------- Animaciones ----------
+   Pocas y con intención: entrada suave al cargar, aparición de cada paso al llegar a él,
+   "pop" cuando cambia una cantidad o el total, y la barra de stock que se llena sola. */
+@keyframes gia-subir {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes gia-pop {
+  0% {
+    transform: scale(0.75);
+    opacity: 0.5;
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes gia-trazo {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.gia-zona-sur .gia-entra {
+  animation: gia-subir 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.gia-zona-sur .gia-aparece {
+  animation: gia-subir 0.35s ease-out both;
+}
+
+.gia-zona-sur .gia-pop {
+  animation: gia-pop 0.28s ease-out;
+}
+
+.gia-zona-sur .gia-revelar {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.6s ease-out,
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gia-zona-sur .gia-revelar[data-visible="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+.gia-zona-sur .gia-check {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: gia-trazo 0.6s 0.35s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gia-zona-sur *,
+  .gia-zona-sur *::before,
+  .gia-zona-sur *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .gia-zona-sur .gia-revelar {
+    opacity: 1;
+    transform: none;
+  }
+  .gia-zona-sur .gia-check {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* "Gratis" resaltado: pastilla dorada con un brillo que cruza de vez en cuando. */
+.gia-zona-sur .gia-gratis {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  border-radius: 9999px;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+  background: linear-gradient(135deg, #f8d98e, #f0b95a);
+  box-shadow: 0 2px 8px -2px rgba(240, 185, 90, 0.7);
+}
+
+.gia-zona-sur .gia-gratis::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.65) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: gia-brillo 4s ease-in-out 1.2s infinite;
+}
+
+@keyframes gia-brillo {
+  0%,
+  60% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
 }

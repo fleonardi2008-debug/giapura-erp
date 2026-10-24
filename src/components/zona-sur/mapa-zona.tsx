@@ -5,7 +5,7 @@
 // cliente", Leaflet puede tocar el DOM desde el primer render.
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Circle, Marker, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Circle, CircleMarker, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 
 // El icono por defecto de Leaflet no resuelve bien sus imagenes cuando el
@@ -30,6 +30,10 @@ type Props = {
   /** Color del circulo (para que combine con la marca en la pagina publica). */
   colorCirculo?: string;
   alto?: string;
+  /** Mostrar el pin del centro de la zona. En la página pública se oculta (confunde: parece "tu ubicación"). */
+  mostrarCentro?: boolean;
+  /** Punto del cliente (su dirección ya ubicada): se dibuja y el mapa se ajusta para mostrarlo junto a la zona. */
+  punto?: { lat: number; lng: number };
 };
 
 function ClicksDelMapa({ onMoverCentro }: { onMoverCentro?: (lat: number, lng: number) => void }) {
@@ -51,12 +55,24 @@ function SeguirCentro({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
+// Encuadra la zona y, si hay, el punto del cliente.
+function EncuadrarPunto({ lat, lng, radioKm, punto }: { lat: number; lng: number; radioKm: number; punto?: { lat: number; lng: number } }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!punto) return;
+    const limites = L.latLng(lat, lng).toBounds(radioKm * 2000).extend([punto.lat, punto.lng]);
+    map.fitBounds(limites, { padding: [24, 24], maxZoom: 15 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [punto?.lat, punto?.lng]);
+  return null;
+}
+
 // En el celular un dedo tiene que scrollear la pagina (no arrastrar el mapa); con dos dedos si se mueve.
 function esTactil() {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 }
 
-export function MapaZona({ lat, lng, radioKm, onMoverCentro, colorCirculo = "#4A1C05", alto = "24rem" }: Props) {
+export function MapaZona({ lat, lng, radioKm, onMoverCentro, colorCirculo = "#4A1C05", alto = "24rem", mostrarCentro = true, punto }: Props) {
   // El zoom se ajusta solo, mas cerca cuanto mas chico es el radio.
   const zoomInicial = useMemo(() => {
     if (radioKm <= 2) return 13;
@@ -74,7 +90,15 @@ export function MapaZona({ lat, lng, radioKm, onMoverCentro, colorCirculo = "#4A
         />
         <SeguirCentro lat={lat} lng={lng} />
         {onMoverCentro && <ClicksDelMapa onMoverCentro={onMoverCentro} />}
-        <Marker position={[lat, lng]} icon={iconoPin} />
+        {mostrarCentro && <Marker position={[lat, lng]} icon={iconoPin} />}
+        <EncuadrarPunto lat={lat} lng={lng} radioKm={radioKm} punto={punto} />
+        {punto && (
+          <CircleMarker
+            center={[punto.lat, punto.lng]}
+            radius={9}
+            pathOptions={{ color: "#ffffff", weight: 3, fillColor: "#b3261e", fillOpacity: 1 }}
+          />
+        )}
         <Circle
           center={[lat, lng]}
           radius={radioKm * 1000}

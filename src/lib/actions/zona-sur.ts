@@ -10,6 +10,7 @@ import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
 import { parsearTarifasAndreani } from "@/lib/zona-sur-andreani";
 import { descuentoEfectivo } from "@/lib/zona-sur-precios";
 import { leerStockZonaSur } from "@/lib/zona-sur-stock";
+import { distanciaKm } from "@/lib/zona-sur-geo";
 
 async function requireOwner() {
   const session = await getSession();
@@ -212,6 +213,8 @@ const pedidoPublicoSchema = z.object({
   colegioDia: z.string().optional(),
   metodoPago: z.nativeEnum(ZonaSurMetodoPago),
   pagaCon: z.coerce.number().optional(),
+  lat: z.coerce.number().optional(),
+  lng: z.coerce.number().optional(),
   items: z.string().transform((v, ctx) => {
     try {
       const parsed = JSON.parse(v);
@@ -233,6 +236,8 @@ export async function crearZonaSurPedido(formData: FormData) {
     colegioDia: formData.get("colegioDia") ?? "",
     metodoPago: formData.get("metodoPago"),
     pagaCon: formData.get("pagaCon") || undefined,
+    lat: formData.get("lat") || undefined,
+    lng: formData.get("lng") || undefined,
     items: formData.get("items"),
   });
 
@@ -261,6 +266,21 @@ export async function crearZonaSurPedido(formData: FormData) {
     create: { id: "singleton" },
     update: {},
   });
+
+  // Envío a domicilio: el navegador ubica la dirección y manda las coordenadas; acá se vuelve a comprobar
+  // que caigan dentro del círculo de la zona (el mapa que ve el cliente).
+  if (data.metodoEntrega === "ENVIO_ZONA") {
+    if (data.lat == null || data.lng == null || !Number.isFinite(data.lat) || !Number.isFinite(data.lng)) {
+      return { error: "No pudimos verificar tu dirección. Revisala y probá de nuevo." };
+    }
+    const km = distanciaKm({ lat: config.zonaCentroLat, lng: config.zonaCentroLng }, { lat: data.lat, lng: data.lng });
+    if (km > config.zonaRadioKm) {
+      const zona = Number(config.zonaPrecio) > 0 ? "zona de envío a domicilio" : "zona de envío gratis";
+      return {
+        error: `Tu dirección queda fuera de la ${zona}.${config.andreaniActivo ? " Elegí envío por Andreani." : ""}`,
+      };
+    }
+  }
 
   if (data.metodoEntrega === "ANDREANI" && !config.andreaniActivo) {
     return { error: "Por ahora no hacemos envíos por Andreani. Probá con otra forma de entrega." };
