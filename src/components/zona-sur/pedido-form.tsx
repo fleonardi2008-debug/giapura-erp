@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { crearZonaSurPedido } from "@/lib/actions/zona-sur";
-import { estimarEnvioAndreani, numeroDeCodigoPostal, type TarifaAndreani } from "@/lib/zona-sur-andreani";
+import { estimarEnvioAndreaniCercano, numeroDeCodigoPostal, type TarifaAndreani } from "@/lib/zona-sur-andreani";
 import { descuentoEfectivo as descuentoEnEfectivo, precioEnEfectivo } from "@/lib/zona-sur-precios";
 import { distanciaKm, ubicarDireccion, type Punto } from "@/lib/zona-sur-geo";
 import { cn } from "@/lib/utils";
@@ -157,6 +157,9 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
   const [direccion, setDireccion] = useState("");
   const [colegioDia, setColegioDia] = useState("");
   const [cpEstimado, setCpEstimado] = useState("");
+  const [calculadoraAbierta, setCalculadoraAbierta] = useState(false);
+  // Datos de envío por Andreani (los mismos que pide RedChat para cargar el envío).
+  const [modalidadAndreani, setModalidadAndreani] = useState<"DOMICILIO" | "SUCURSAL">("DOMICILIO");
   const [metodoPago, setMetodoPago] = useState<MetodoPago>("TRANSFERENCIA");
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -178,10 +181,15 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
     () => skus.reduce((acc, s) => acc + (cantidades[s.id] ?? 0) * s.precioVenta, 0),
     [skus, cantidades]
   );
-  // El envío por Andreani no suma acá: se paga aparte, directo a Andreani.
+  // Envío por Andreani: se cobra junto con los productos, según la tabla de tarifas (sucursal / domicilio).
+  const envioAndreani =
+    metodoEntrega === "ANDREANI" && subtotal > 0
+      ? estimarEnvioAndreaniCercano(config.andreaniTarifas, cpEstimado, modalidadAndreani)
+      : null;
   // El descuento por pagar en efectivo es sobre los productos (no sobre el envío).
   const descuento = metodoPago === "EFECTIVO" ? descuentoEnEfectivo(subtotal, config.descuentoEfectivo) : 0;
-  const totalConEnvio = subtotal - descuento + (metodoEntrega === "ENVIO_ZONA" ? config.zonaPrecio : 0);
+  const totalConEnvio =
+    subtotal - descuento + (metodoEntrega === "ENVIO_ZONA" ? config.zonaPrecio : 0) + (envioAndreani?.precio ?? 0);
   const hayDescuentoEfectivo = config.descuentoEfectivo > 0;
   const hayProductos = Object.values(cantidades).some((c) => c > 0);
   const unidadesTotales = Object.values(cantidades).reduce((a, c) => a + c, 0);
@@ -201,14 +209,19 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
       return gasta === 0 || quedanSinCarrito(f) - enCarrito(f.id) >= gasta;
     });
 
-  const estimadoAndreani = estimarEnvioAndreani(config.andreaniTarifas, cpEstimado);
-  const mensajeEstimado = !cpEstimado.trim()
-    ? null
-    : numeroDeCodigoPostal(cpEstimado) === null
-      ? "Escribí los 4 números de tu código postal."
-      : estimadoAndreani === null
-        ? "No tenemos un aproximado para ese código postal. Lo ves en el link de Andreani antes de pagar."
-        : `Aproximadamente ${moneyAR(estimadoAndreani)}`;
+  // Calculadora: precio del envío a sucursal y a domicilio para el código postal escrito.
+  const cpValido = numeroDeCodigoPostal(cpEstimado) !== null;
+  const mensajeEstimado = (() => {
+    if (!cpEstimado.trim()) return null;
+    if (!cpValido) return "Escribí los 4 números de tu código postal.";
+    const sucursal = estimarEnvioAndreaniCercano(config.andreaniTarifas, cpEstimado, "SUCURSAL");
+    const domicilio = estimarEnvioAndreaniCercano(config.andreaniTarifas, cpEstimado, "DOMICILIO");
+    if (!sucursal && !domicilio) {
+      return "No tenemos una tarifa cargada para ese código postal. Te confirmamos el costo del envío por WhatsApp.";
+    }
+    const cercano = sucursal?.cercano || domicilio?.cercano ? " (estimado según una zona cercana)" : "";
+    return `A sucursal: ${sucursal ? moneyAR(sucursal.precio) : "a confirmar"} · A domicilio: ${domicilio ? moneyAR(domicilio.precio) : "a confirmar"}${cercano}`;
+  })();
 
   const centroZona: Punto = { lat: config.zonaCentroLat, lng: config.zonaCentroLng };
   const nombreZona = config.zonaPrecio > 0 ? "zona de envío a domicilio" : "zona de envío gratis";
@@ -313,7 +326,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
           {metodoEntrega === "ENVIO_ZONA"
             ? "el envío"
             : metodoEntrega === "ANDREANI"
-              ? "el envío: te mandamos un link de Andreani para que completes tu dirección y pagues el envío"
+              ? "el envío por Andreani: te mandamos el seguimiento"
               : metodoEntrega === "COLEGIO"
                 ? "la entrega en el colegio"
                 : "la entrega en el punto de encuentro"}
@@ -528,7 +541,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
             <TarjetaOpcion activo={metodoEntrega === "ANDREANI"} onClick={elegirAndreani}>
               <span className="font-medium">Envío por Andreani</span>
               <span className="text-sm text-[var(--muted-foreground)]">
-                Para cualquier lugar del país. El envío lo pagás directo a Andreani.
+                Para cualquier lugar del país. El costo del envío se suma al total que transferís.
                 {config.andreaniTexto?.trim() && <> {config.andreaniTexto.trim()}</>}
               </span>
             </TarjetaOpcion>
@@ -538,35 +551,149 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         {metodoEntrega === "ANDREANI" && config.andreaniActivo && (
           <ol className="gia-aparece list-decimal space-y-1 rounded-2xl border border-[var(--border)] bg-[var(--card)] py-3 pl-9 pr-4 text-sm">
             <li>Elegí tus packs (las cajas de envío son de a dos, no hay frascos sueltos por Andreani).</li>
-            <li>Pagás los productos por transferencia y subís el comprobante.</li>
-            <li>Te mandamos por WhatsApp un link de Andreani.</li>
-            <li>En ese link completás tu dirección y pagás el envío a Andreani.</li>
+            <li>Transferís el total (productos + envío) y subís el comprobante.</li>
+            <li>Completás tus datos de envío, más abajo.</li>
+            <li>Te escribimos por WhatsApp con el seguimiento de tu envío.</li>
           </ol>
         )}
 
-        {metodoEntrega === "ANDREANI" && config.andreaniActivo && config.andreaniTarifas.length > 0 && (
-          <div className="gia-aparece space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
-            <Label htmlFor="cpEstimado">Calculá tu envío aproximado</Label>
-            <Input
-              id="cpEstimado"
-              value={cpEstimado}
-              onChange={(e) => setCpEstimado(e.target.value)}
-              onKeyDown={(e) => {
-                // Está dentro del formulario del pedido: Enter no tiene que mandarlo.
-                if (e.key === "Enter") e.preventDefault();
-              }}
-              placeholder="Tu código postal (ej: 1878)"
-              autoComplete="postal-code"
-              inputMode="numeric"
-              maxLength={8}
-              className={cn(CAMPO, "sm:max-w-56")}
-            />
-            <p aria-live="polite" className="min-h-5 text-sm font-medium">
-              {mensajeEstimado}
-            </p>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              Es solo una referencia. El precio final lo ves en el link de Andreani antes de pagar.
-            </p>
+        {metodoEntrega === "ANDREANI" && config.andreaniActivo && (
+          <div className="gia-aparece space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 w-full justify-between rounded-2xl px-4 text-base"
+              aria-expanded={calculadoraAbierta}
+              aria-controls="calculadora-envio"
+              onClick={() => setCalculadoraAbierta((a) => !a)}
+            >
+              Calcular costo de envío
+              <span aria-hidden className={cn("transition-transform duration-200", calculadoraAbierta && "rotate-180")}>
+                ▾
+              </span>
+            </Button>
+            {calculadoraAbierta && (
+              <div
+                id="calculadora-envio"
+                className="gia-aparece space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4"
+              >
+                <Label htmlFor="cpEstimado">Tu código postal</Label>
+                <Input
+                  id="cpEstimado"
+                  value={cpEstimado}
+                  onChange={(e) => setCpEstimado(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Está dentro del formulario del pedido: Enter no tiene que mandarlo.
+                    if (e.key === "Enter") e.preventDefault();
+                  }}
+                  placeholder="Ej: 1878"
+                  autoComplete="postal-code"
+                  inputMode="numeric"
+                  maxLength={8}
+                  autoFocus
+                  className={cn(CAMPO, "sm:max-w-56")}
+                />
+                <p aria-live="polite" className="min-h-5 text-base font-semibold">
+                  {mensajeEstimado}
+                </p>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  Este es el costo que se suma al total de tu pedido.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {metodoEntrega === "ANDREANI" && config.andreaniActivo && (
+          <div className="gia-aparece space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+            <p className="text-sm font-medium">Datos para el envío</p>
+            <input type="hidden" name="andreaniModalidad" value={modalidadAndreani} />
+            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Tipo de envío por Andreani">
+              <TarjetaOpcion activo={modalidadAndreani === "DOMICILIO"} onClick={() => setModalidadAndreani("DOMICILIO")}>
+                <span className="font-medium">A domicilio</span>
+              </TarjetaOpcion>
+              <TarjetaOpcion activo={modalidadAndreani === "SUCURSAL"} onClick={() => setModalidadAndreani("SUCURSAL")}>
+                <span className="font-medium">A una sucursal</span>
+              </TarjetaOpcion>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="clienteDni">DNI</Label>
+              <Input
+                id="clienteDni"
+                name="clienteDni"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Solo números"
+                className={CAMPO}
+                required
+              />
+            </div>
+            {modalidadAndreani === "DOMICILIO" ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="envioCalle">Calle</Label>
+                  <Input id="envioCalle" name="envioCalle" autoComplete="address-line1" className={CAMPO} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="envioNumero">Número</Label>
+                  <Input id="envioNumero" name="envioNumero" inputMode="numeric" placeholder="S/N si no tiene" className={CAMPO} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="envioPiso">Piso / Dpto (opcional)</Label>
+                  <Input id="envioPiso" name="envioPiso" autoComplete="address-line2" className={CAMPO} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="envioCp">Código postal</Label>
+                  <Input
+                    id="envioCp"
+                    name="envioCp"
+                    value={cpEstimado}
+                    onChange={(e) => setCpEstimado(e.target.value)}
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    maxLength={8}
+                    className={CAMPO}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="envioCiudad">Ciudad</Label>
+                  <Input id="envioCiudad" name="envioCiudad" autoComplete="address-level2" className={CAMPO} />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="envioProvincia">Provincia</Label>
+                  <Input id="envioProvincia" name="envioProvincia" autoComplete="address-level1" className={CAMPO} />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="envioCp">Código postal de donde querés retirar</Label>
+                <Input
+                  id="envioCp"
+                  name="envioCp"
+                  value={cpEstimado}
+                  onChange={(e) => setCpEstimado(e.target.value)}
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  maxLength={8}
+                  placeholder="Ej: 5000"
+                  className={cn(CAMPO, "sm:max-w-56")}
+                  required
+                />
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  Buscamos la sucursal de Andreani más cercana a ese código postal y te avisamos por WhatsApp cuál es.
+                </p>
+              </div>
+            )}
+            {cpEstimado.trim() && cpValido && (
+              <p className="text-sm font-semibold">
+                {envioAndreani
+                  ? `Envío ${modalidadAndreani === "SUCURSAL" ? "a sucursal" : "a domicilio"}: ${moneyAR(envioAndreani.precio)}, ya sumado al total.${envioAndreani.cercano ? " (estimado según una zona cercana)" : ""}`
+                  : subtotal > 0
+                    ? "Te confirmamos el costo del envío por WhatsApp. Todavía no está sumado al total."
+                    : "Elegí tus packs para ver el costo del envío."}
+              </p>
+            )}
           </div>
         )}
 
@@ -741,6 +868,11 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
             {unidadesTotales > 0 ? `${unidadesTotales} ${unidadesTotales === 1 ? "producto" : "productos"}` : "Tu pedido"}
             {metodoEntrega === "ENVIO_ZONA" && config.zonaPrecio === 0 && (
               <span className="block text-xs font-semibold text-[var(--primary)]">Envío gratis incluido</span>
+            )}
+            {envioAndreani && (
+              <span className="block text-xs font-semibold text-[var(--primary)]">
+                Incluye envío Andreani {moneyAR(envioAndreani.precio)}
+              </span>
             )}
             {descuento > 0 && (
               <span className="block text-xs">

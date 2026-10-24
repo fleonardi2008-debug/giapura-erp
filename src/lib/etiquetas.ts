@@ -58,8 +58,10 @@ export function codigoPedido(id: string) {
 }
 
 export function destinoPedido(p: Pick<PedidoParaEtiqueta, "metodoEntrega" | "direccion" | "puntoElegido">) {
-  // Con Andreani la dirección la completa el cliente en el link del correo, no la tenemos acá.
-  if (p.metodoEntrega === "ANDREANI") return "Andreani (datos en su link)";
+  if (p.metodoEntrega === "ANDREANI") {
+    // Pedidos nuevos traen la dirección del cliente; los viejos la completaron en el link de Andreani.
+    return p.direccion?.trim() ? `Andreani — ${p.direccion.trim()}` : "Andreani (datos en su link)";
+  }
   const texto = p.metodoEntrega === "ENVIO_ZONA" ? p.direccion : p.puntoElegido;
   return texto?.trim() || "—";
 }

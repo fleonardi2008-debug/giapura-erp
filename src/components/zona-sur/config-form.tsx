@@ -346,27 +346,28 @@ export function ZonaSurConfigForm({ config, productos }: { config: Config; produ
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="andreaniTarifas">Precios aproximados por código postal (opcional)</Label>
+            <Label htmlFor="andreaniTarifas">Precio del envío por código postal (sucursal / domicilio)</Label>
             <Textarea
               id="andreaniTarifas"
               name="andreaniTarifas"
               rows={6}
               defaultValue={config.andreaniTarifas ?? ""}
-              placeholder={"1000-1799 = 5800\n1800-1999 = 6500\n1878 = 5900\n2000-2999 = 8200"}
+              placeholder={"1000-1999 = 7701 / 10158\n2000-2999 = 9500 / 12500\n5000 = 12000"}
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Una regla por línea: un código postal (<code>1878 = 6500</code>) o un rango (
-              <code>1800-1999 = 6500</code>). Si coinciden varias, gana la más específica. Si cargás algo acá, en la
-              página aparece un casillero para que el cliente calcule su envío aproximado; si lo dejás vacío, no
-              aparece. Sacá los precios del cotizador de Andreani con el peso y medidas de tu paquete y actualizalos
-              cuando cambien.
+              Una regla por línea, con el precio &quot;sucursal / domicilio&quot;: por ejemplo{" "}
+              <code>1000-1999 = 7701 / 10158</code> (un rango) o <code>1878 = 7701 / 10158</code> (un código postal).
+              Con un solo número (<code>5000 = 12000</code>) vale para los dos. Si coinciden varias reglas, gana la
+              más específica; si un código postal no está, se usa la regla más cercana (hasta 300 números de
+              diferencia) y si no hay ninguna cerca, el envío queda &quot;a confirmar&quot;. Este precio se suma al
+              total que el cliente te transfiere. Sacalo de tu cotización en RedChat y actualizalo cuando cambie.
             </p>
           </div>
           <p className="text-xs text-muted-foreground sm:col-span-2">
-            El cliente paga los productos por transferencia (con Andreani no se puede pagar en efectivo). Después le
-            mandás, desde &quot;Envíos por Andreani&quot;, un link de Andreani donde completa su dirección y paga el
-            envío directo a ellos. Cada link se usa una sola vez, así que hay uno por pedido.
+            El cliente te transfiere el total (productos + envío; con Andreani no se puede pagar en efectivo) y
+            completa sus datos en la página. En &quot;Envíos por Andreani&quot; los copiás a RedChat y pagás el envío
+            con tu convenio.
           </p>
         </CardContent>
       </Card>

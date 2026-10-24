@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { ZonaSurEstado, ZonaSurMetodoEntrega, ZonaSurMetodoPago } from "@/generated/prisma/client";
 import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
-import { parsearTarifasAndreani } from "@/lib/zona-sur-andreani";
+import { estimarEnvioAndreaniCercano, numeroDeCodigoPostal, parsearTarifasAndreani } from "@/lib/zona-sur-andreani";
 import { descuentoEfectivo } from "@/lib/zona-sur-precios";
 import { leerStockZonaSur } from "@/lib/zona-sur-stock";
 import { distanciaKm } from "@/lib/zona-sur-geo";
@@ -102,7 +102,7 @@ export async function guardarZonaSurConfig(formData: FormData) {
   if (errores.length > 0) {
     const e = errores[0];
     return {
-      error: `La línea ${e.linea} de la tabla de Andreani no se entiende: "${e.texto}". Formato: 1878 = 6500 o 1800-1999 = 6500`,
+      error: `La línea ${e.linea} de la tabla de Andreani no se entiende: "${e.texto}". Formato: 1000-1999 = 7701 / 10158 (sucursal / domicilio) o 1878 = 7701 / 10158`,
     };
   }
 
@@ -215,6 +215,14 @@ const pedidoPublicoSchema = z.object({
   pagaCon: z.coerce.number().optional(),
   lat: z.coerce.number().optional(),
   lng: z.coerce.number().optional(),
+  clienteDni: z.string().optional(),
+  andreaniModalidad: z.enum(["DOMICILIO", "SUCURSAL"]).optional(),
+  envioCalle: z.string().optional(),
+  envioNumero: z.string().optional(),
+  envioPiso: z.string().optional(),
+  envioCp: z.string().optional(),
+  envioCiudad: z.string().optional(),
+  envioProvincia: z.string().optional(),
   items: z.string().transform((v, ctx) => {
     try {
       const parsed = JSON.parse(v);
@@ -238,6 +246,14 @@ export async function crearZonaSurPedido(formData: FormData) {
     pagaCon: formData.get("pagaCon") || undefined,
     lat: formData.get("lat") || undefined,
     lng: formData.get("lng") || undefined,
+    clienteDni: formData.get("clienteDni") ?? "",
+    andreaniModalidad: formData.get("andreaniModalidad") || undefined,
+    envioCalle: formData.get("envioCalle") ?? "",
+    envioNumero: formData.get("envioNumero") ?? "",
+    envioPiso: formData.get("envioPiso") ?? "",
+    envioCp: formData.get("envioCp") ?? "",
+    envioCiudad: formData.get("envioCiudad") ?? "",
+    envioProvincia: formData.get("envioProvincia") ?? "",
     items: formData.get("items"),
   });
 
@@ -254,6 +270,47 @@ export async function crearZonaSurPedido(formData: FormData) {
   // (La dirección y el pago del envío los completa el cliente en el link de Andreani.)
   if (data.metodoEntrega === "ANDREANI" && data.metodoPago === "EFECTIVO") {
     return { error: "Con envío por Andreani solo se puede pagar por transferencia" };
+  }
+
+  // Andreani: se piden los mismos datos que RedChat para cargar el envío (DNI, domicilio o sucursal).
+  let datosAndreani: {
+    clienteDni: string;
+    andreaniModalidad: "DOMICILIO" | "SUCURSAL";
+    envioCalle: string | null;
+    envioNumero: string | null;
+    envioPiso: string | null;
+    envioCp: string;
+    envioCiudad: string | null;
+    envioProvincia: string | null;
+    direccion: string;
+  } | null = null;
+  if (data.metodoEntrega === "ANDREANI") {
+    const dni = (data.clienteDni ?? "").replace(/[.\s-]/g, "");
+    if (!/^\d{7,9}$/.test(dni)) return { error: "Falta el DNI (solo números, sin puntos)" };
+    if (!data.andreaniModalidad) return { error: "Elegí si querés el envío a domicilio o a una sucursal de Andreani" };
+    const cp = numeroDeCodigoPostal(data.envioCp ?? "");
+    if (cp === null) return { error: "Escribí tu código postal (los 4 números)" };
+    const calle = (data.envioCalle ?? "").trim();
+    if (data.andreaniModalidad === "DOMICILIO" && !calle) return { error: "Falta la calle de tu dirección" };
+    const limpio = (v?: string) => v?.trim() || null;
+    const esDomicilio = data.andreaniModalidad === "DOMICILIO";
+    const partes = [
+      [calle, limpio(data.envioNumero)].filter(Boolean).join(" "),
+      limpio(data.envioPiso),
+      limpio(data.envioCiudad),
+      limpio(data.envioProvincia),
+    ].filter(Boolean);
+    datosAndreani = {
+      clienteDni: dni,
+      andreaniModalidad: data.andreaniModalidad,
+      envioCalle: esDomicilio ? calle : null,
+      envioNumero: esDomicilio ? limpio(data.envioNumero) : null,
+      envioPiso: esDomicilio ? limpio(data.envioPiso) : null,
+      envioCp: String(cp),
+      envioCiudad: esDomicilio ? limpio(data.envioCiudad) : null,
+      envioProvincia: esDomicilio ? limpio(data.envioProvincia) : null,
+      direccion: esDomicilio ? `${partes.join(", ")} (CP ${cp})` : `A sucursal de Andreani — CP ${cp}`,
+    };
   }
 
   const comprobante = formData.get("comprobante");
@@ -361,6 +418,21 @@ export async function crearZonaSurPedido(formData: FormData) {
   let total = totalProductos - descuento;
   if (data.metodoEntrega === "ENVIO_ZONA") total += Number(config.zonaPrecio);
 
+  // Envío por Andreani: se cobra junto con los productos. El precio sale de la tabla de tarifas
+  // (nunca de lo que mande el navegador). Sin tarifa para ese código postal, queda "a confirmar".
+  let costoEnvio = 0;
+  let envioAConfirmar = false;
+  if (datosAndreani) {
+    const cotizado = estimarEnvioAndreaniCercano(
+      parsearTarifasAndreani(config.andreaniTarifas).tarifas,
+      datosAndreani.envioCp,
+      datosAndreani.andreaniModalidad
+    );
+    costoEnvio = cotizado?.precio ?? 0;
+    envioAConfirmar = !cotizado;
+    total += costoEnvio;
+  }
+
   if (data.metodoPago === "EFECTIVO" && (!data.pagaCon || data.pagaCon < total)) {
     return { error: "Falta indicar con cuánto pagás (tiene que ser al menos el total)" };
   }
@@ -380,13 +452,27 @@ export async function crearZonaSurPedido(formData: FormData) {
       clienteEmail: data.clienteEmail,
       clienteTelefono: data.clienteTelefono,
       metodoEntrega: data.metodoEntrega,
-      direccion: data.metodoEntrega === "ENVIO_ZONA" ? data.direccion : null,
+      direccion: data.metodoEntrega === "ENVIO_ZONA" ? data.direccion : (datosAndreani?.direccion ?? null),
+      ...(datosAndreani
+        ? {
+            clienteDni: datosAndreani.clienteDni,
+            andreaniModalidad: datosAndreani.andreaniModalidad,
+            envioCalle: datosAndreani.envioCalle,
+            envioNumero: datosAndreani.envioNumero,
+            envioPiso: datosAndreani.envioPiso,
+            envioCp: datosAndreani.envioCp,
+            envioCiudad: datosAndreani.envioCiudad,
+            envioProvincia: datosAndreani.envioProvincia,
+          }
+        : {}),
       puntoElegido,
       colegioDia,
       metodoPago: data.metodoPago,
       comprobanteUrl,
       pagaCon: data.metodoPago === "EFECTIVO" ? data.pagaCon : null,
       descuento,
+      costoEnvio,
+      envioAConfirmar,
       total,
       items: { create: itemsParaCrear },
     },

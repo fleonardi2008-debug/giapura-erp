@@ -614,7 +614,18 @@ model ZonaSurPedido {
   clienteTelefono String
   metodoEntrega  ZonaSurMetodoEntrega
   direccion      String? // solo si metodoEntrega = ENVIO_ZONA
-  andreaniLink   String? // solo si metodoEntrega = ANDREANI: link de un solo uso donde el cliente completa sus datos y paga el envío
+  andreaniLink   String? // solo si metodoEntrega = ANDREANI: link de un solo uso donde el cliente completa sus datos y paga el envío (ya opcional)
+  // Datos para cargar el envío en RedChat (solo ANDREANI). Mismos campos que pide su formulario.
+  costoEnvio        Decimal @default(0) @db.Decimal(14, 2) // envío por Andreani cobrado al cliente, ya sumado al total
+  envioAConfirmar   Boolean @default(false) // no había tarifa para su código postal: el envío se cobra aparte
+  clienteDni        String?
+  andreaniModalidad String? // "DOMICILIO" o "SUCURSAL"
+  envioCalle        String?
+  envioNumero       String?
+  envioPiso         String?
+  envioCp           String? // en sucursal es el código postal para buscar la sucursal más cercana
+  envioCiudad       String?
+  envioProvincia    String?
   puntoElegido   String? // copia del texto del punto vigente al momento del pedido
   colegioDia     String? // solo si metodoEntrega = COLEGIO: el día elegido, tal cual figuraba en la config
   metodoPago     ZonaSurMetodoPago
