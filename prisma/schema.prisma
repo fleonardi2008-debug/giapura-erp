@@ -138,6 +138,8 @@ model Sku {
   // Qué parte de la foto queda centrada en el cuadrado de la página (0-100; 50 = centro).
   imagenPosX Int @default(50)
   imagenPosY Int @default(50)
+  // Zoom de la foto en el cuadrado, en % (100 = sin zoom, 300 = el triple).
+  imagenZoom Int @default(100)
 
   // Economía unitaria: precio de venta, merma y prorrateo de gastos fijos
   // para calcular contribución marginal y punto de equilibrio. Para un frasco,

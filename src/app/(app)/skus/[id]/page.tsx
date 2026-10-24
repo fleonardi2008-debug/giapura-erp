@@ -84,7 +84,7 @@ export default async function SkuDetailPage({ params }: { params: Promise<{ id: 
             nombre={sku.nombre}
             unidadMedida={sku.unidadMedida}
           />
-          <EditarImagenDialog skuId={sku.id} imagenUrl={sku.imagenUrl} posX={sku.imagenPosX} posY={sku.imagenPosY} />
+          <EditarImagenDialog skuId={sku.id} imagenUrl={sku.imagenUrl} posX={sku.imagenPosX} posY={sku.imagenPosY} zoom={sku.imagenZoom} />
           <EditarEconomiaDialog
             skuId={sku.id}
             esFrasco={!esPack}

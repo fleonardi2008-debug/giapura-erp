@@ -23,6 +23,8 @@ type Sku = {
   imagenUrl: string | null;
   /** CSS object-position de la foto, ej: "50% 40%" */
   imagenPosicion: string;
+  /** 1 = sin zoom */
+  imagenZoom: number;
   esPack: boolean;
   /** frascoId → cuántos frascos de ese gasta una unidad (un pack gasta lo de su composición) */
   consumo: Record<string, number>;
@@ -292,7 +294,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                 <div className="relative aspect-square overflow-hidden rounded-xl bg-[var(--muted)]">
                   {sku.imagenUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={sku.imagenUrl} alt={sku.nombre} className="h-full w-full object-cover" style={{ objectPosition: sku.imagenPosicion }} />
+                    <img src={sku.imagenUrl} alt={sku.nombre} className="h-full w-full object-cover" style={{ objectPosition: sku.imagenPosicion, transform: `scale(${sku.imagenZoom})`, transformOrigin: sku.imagenPosicion }} />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-[var(--muted-foreground)]">
                       giapura.

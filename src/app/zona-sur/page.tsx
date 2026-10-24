@@ -22,7 +22,7 @@ export default async function ZonaSurPage() {
         OR: [{ precioZonaSur: { not: null } }, { precioVenta: { not: null } }],
       },
       orderBy: { nombre: "asc" },
-      select: { id: true, nombre: true, precioVenta: true, precioZonaSur: true, imagenUrl: true, imagenPosX: true, imagenPosY: true, nivel: true },
+      select: { id: true, nombre: true, precioVenta: true, precioZonaSur: true, imagenUrl: true, imagenPosX: true, imagenPosY: true, imagenZoom: true, nivel: true },
     }),
   ]);
 
@@ -54,6 +54,7 @@ export default async function ZonaSurPage() {
           precioVenta: Number(s.precioZonaSur ?? s.precioVenta),
           imagenUrl: s.imagenUrl,
           imagenPosicion: `${s.imagenPosX}% ${s.imagenPosY}%`,
+          imagenZoom: s.imagenZoom / 100,
           esPack: s.nivel === "PACK",
           consumo: consumo[s.id] ?? {},
         }))}

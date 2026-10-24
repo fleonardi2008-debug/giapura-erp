@@ -32,15 +32,18 @@ export function EditarImagenDialog({
   imagenUrl,
   posX = 50,
   posY = 50,
+  zoom = 100,
 }: {
   skuId: string;
   imagenUrl: string | null;
   posX?: number;
   posY?: number;
+  zoom?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [x, setX] = useState(posX);
   const [y, setY] = useState(posY);
+  const [z, setZ] = useState(zoom);
   const [pending, startTransition] = useTransition();
 
   function handleSubmit(formData: FormData) {
@@ -96,14 +99,30 @@ export function EditarImagenDialog({
               <p className="text-sm font-medium">Encuadre en la página</p>
               <div className="flex flex-wrap items-center gap-4">
                 {/* Misma forma que en /zona-sur: cuadrado que recorta la foto. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={imagenUrl}
-                  alt=""
-                  className="h-40 w-40 rounded-lg border object-cover"
-                  style={{ objectPosition: `${x}% ${y}%` }}
-                />
+                <div className="h-40 w-40 overflow-hidden rounded-lg border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imagenUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    style={{ objectPosition: `${x}% ${y}%`, transform: `scale(${z / 100})`, transformOrigin: `${x}% ${y}%` }}
+                  />
+                </div>
                 <div className="min-w-48 flex-1 space-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="imagenZoom">Zoom ({z}%)</Label>
+                    <input
+                      id="imagenZoom"
+                      name="imagenZoom"
+                      type="range"
+                      min={100}
+                      max={300}
+                      step={5}
+                      value={z}
+                      onChange={(e) => setZ(Number(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
                   <div className="space-y-1">
                     <Label htmlFor="imagenPosX">Izquierda ↔ derecha</Label>
                     <input
@@ -133,8 +152,8 @@ export function EditarImagenDialog({
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Mové los deslizadores hasta que el frasco quede centrado. Si la foto es casi cuadrada casi no hay
-                margen para mover.
+                Con el zoom acercás la foto y con los otros dos deslizadores la movés hasta que el frasco quede
+                centrado. Sin zoom, si la foto es casi cuadrada casi no hay margen para mover.
               </p>
             </div>
           )}

@@ -303,6 +303,7 @@ const imagenSchema = z.object({
   imagenUrl: z.string().url("Tiene que ser un link válido (https://...)").optional().or(z.literal("")),
   imagenPosX: z.coerce.number().int().min(0).max(100).default(50),
   imagenPosY: z.coerce.number().int().min(0).max(100).default(50),
+  imagenZoom: z.coerce.number().int().min(100).max(300).default(100),
 });
 
 export async function updateSkuImagen(formData: FormData) {
@@ -314,6 +315,7 @@ export async function updateSkuImagen(formData: FormData) {
     imagenUrl: formData.get("imagenUrl") || "",
     imagenPosX: formData.get("imagenPosX") || 50,
     imagenPosY: formData.get("imagenPosY") || 50,
+    imagenZoom: formData.get("imagenZoom") || 100,
   });
 
   if (!parsed.success) {
@@ -338,7 +340,9 @@ export async function updateSkuImagen(formData: FormData) {
 
   await prisma.sku.update({
     where: { id: skuId },
-    data: { imagenUrl: imagenUrl || null, imagenPosX: parsed.data.imagenPosX, imagenPosY: parsed.data.imagenPosY },
+    data: { imagenUrl: imagenUrl || null, imagenPosX: parsed.data.imagenPosX, imagenPosY: parsed.data.imagenPosY,
+      imagenZoom: parsed.data.imagenZoom,
+    },
   });
 
   revalidatePath(`/skus/${skuId}`);
