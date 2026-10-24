@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/db";
 import { ZonaSurConfigForm } from "@/components/zona-sur/config-form";
+import { leerStockZonaSur } from "@/lib/zona-sur-stock";
 
 export default async function ZonaSurConfigPage() {
-  const [config, skus] = await Promise.all([
+  const [{ stock }, config, skus] = await Promise.all([
+    leerStockZonaSur(),
     prisma.zonaSurConfig.upsert({
       where: { id: "singleton" },
       create: { id: "singleton" },
@@ -11,7 +13,7 @@ export default async function ZonaSurConfigPage() {
     prisma.sku.findMany({
       where: { activo: true, nivel: { in: ["PACK", "FRASCO"] } },
       orderBy: [{ nivel: "desc" }, { nombre: "asc" }],
-      select: { id: true, nombre: true, nivel: true, precioVenta: true, precioZonaSur: true },
+      select: { id: true, nombre: true, nivel: true, precioVenta: true, precioZonaSur: true, stockZonaSur: true },
     }),
   ]);
 
@@ -52,6 +54,8 @@ export default async function ZonaSurConfigPage() {
           esPack: s.nivel === "PACK",
           precioOnline: s.precioVenta ? Number(s.precioVenta) : null,
           precioZonaSur: s.precioZonaSur ? Number(s.precioZonaSur) : null,
+          stockZonaSur: s.stockZonaSur,
+          pedidosHastaAhora: stock.find((f) => f.id === s.id)?.usado ?? 0,
         }))}
       />
     </div>

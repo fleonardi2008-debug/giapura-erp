@@ -2,11 +2,13 @@ import { prisma } from "@/lib/db";
 import { ZonaSurPedidoForm } from "@/components/zona-sur/pedido-form";
 import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
 import { parsearTarifasAndreani } from "@/lib/zona-sur-andreani";
+import { leerStockZonaSur } from "@/lib/zona-sur-stock";
 
 export const dynamic = "force-dynamic";
 
 export default async function ZonaSurPage() {
-  const [config, skus] = await Promise.all([
+  const [{ stock, consumo }, config, skus] = await Promise.all([
+    leerStockZonaSur(),
     prisma.zonaSurConfig.upsert({
       where: { id: "singleton" },
       create: { id: "singleton" },
@@ -20,7 +22,7 @@ export default async function ZonaSurPage() {
         OR: [{ precioZonaSur: { not: null } }, { precioVenta: { not: null } }],
       },
       orderBy: { nombre: "asc" },
-      select: { id: true, nombre: true, precioVenta: true, precioZonaSur: true, imagenUrl: true, nivel: true },
+      select: { id: true, nombre: true, precioVenta: true, precioZonaSur: true, imagenUrl: true, imagenPosX: true, imagenPosY: true, nivel: true },
     }),
   ]);
 
@@ -51,8 +53,11 @@ export default async function ZonaSurPage() {
           nombre: s.nombre,
           precioVenta: Number(s.precioZonaSur ?? s.precioVenta),
           imagenUrl: s.imagenUrl,
+          imagenPosicion: `${s.imagenPosX}% ${s.imagenPosY}%`,
           esPack: s.nivel === "PACK",
+          consumo: consumo[s.id] ?? {},
         }))}
+        stock={stock}
       />
     </div>
   );

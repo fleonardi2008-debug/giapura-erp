@@ -135,6 +135,9 @@ model Sku {
   // Para mostrarlo en paginas de venta propias (ej: /zona-sur). No se usa
   // para nada de costos/contabilidad.
   imagenUrl String?
+  // Qué parte de la foto queda centrada en el cuadrado de la página (0-100; 50 = centro).
+  imagenPosX Int @default(50)
+  imagenPosY Int @default(50)
 
   // Economía unitaria: precio de venta, merma y prorrateo de gastos fijos
   // para calcular contribución marginal y punto de equilibrio. Para un frasco,
@@ -151,6 +154,9 @@ model Sku {
   // Precio de la página de Zona Sur (/zona-sur). Si está vacío se usa precioVenta (el online).
   // Se carga desde Pedidos Zona Sur → Configurar.
   precioZonaSur Decimal? @db.Decimal(14, 2)
+  // Stock de frascos que Fran reparte él mismo en Zona Sur (todo menos Andreani, que sale de fábrica).
+  // Null = sin límite ni barra. Se carga desde Pedidos Zona Sur → Configurar.
+  stockZonaSur Int?
   // Costo de referencia del canal online cuando incluye packaging que el costeo
   // normal no contempla (ej: va en la caja combo aunque se venda un solo frasco).
   // Es un número fijo que se carga a mano, no se recalcula con la receta.

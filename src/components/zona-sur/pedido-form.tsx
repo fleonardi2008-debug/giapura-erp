@@ -16,7 +16,18 @@ const MapaZona = dynamic(() => import("./mapa-zona").then((m) => m.MapaZona), {
   loading: () => <div className="h-64 animate-pulse rounded-xl bg-muted" />,
 });
 
-type Sku = { id: string; nombre: string; precioVenta: number; imagenUrl: string | null; esPack: boolean };
+type Sku = {
+  id: string;
+  nombre: string;
+  precioVenta: number;
+  imagenUrl: string | null;
+  /** CSS object-position de la foto, ej: "50% 40%" */
+  imagenPosicion: string;
+  esPack: boolean;
+  /** frascoId → cuántos frascos de ese gasta una unidad (un pack gasta lo de su composición) */
+  consumo: Record<string, number>;
+};
+type StockFrasco = { id: string; nombre: string; total: number; usado: number };
 type Config = {
   zonaNombre: string;
   zonaCentroLat: number;
@@ -66,7 +77,7 @@ function TarjetaOpcion({
   );
 }
 
-export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[] }) {
+export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; skus: Sku[]; stock: StockFrasco[] }) {
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [metodoEntrega, setMetodoEntrega] = useState<MetodoEntrega>("ENVIO_ZONA");
   const [direccion, setDireccion] = useState("");
@@ -94,6 +105,19 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
   const hayProductos = Object.values(cantidades).some((c) => c > 0);
   // Las cajas de Andreani son de a dos: por ese medio solo se piden packs, no frascos sueltos.
   const soloPacks = metodoEntrega === "ANDREANI";
+
+  // Stock de lo que reparte Fran (todo menos Andreani, que sale de fábrica y no tiene tope).
+  const limitaStock = metodoEntrega !== "ANDREANI";
+  const quedanSinCarrito = (f: StockFrasco) => Math.max(0, f.total - f.usado);
+  const enCarrito = (frascoId: string) =>
+    skus.reduce((acc, s) => acc + (cantidades[s.id] ?? 0) * (s.consumo[frascoId] ?? 0), 0);
+  // ¿Se puede sumar una unidad más de este producto sin pasarse del stock?
+  const hayStockPara = (sku: Sku) =>
+    !limitaStock ||
+    stock.every((f) => {
+      const gasta = sku.consumo[f.id] ?? 0;
+      return gasta === 0 || quedanSinCarrito(f) - enCarrito(f.id) >= gasta;
+    });
 
   const estimadoAndreani = estimarEnvioAndreani(config.andreaniTarifas, cpEstimado);
   const mensajeEstimado = !cpEstimado.trim()
@@ -123,6 +147,13 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
     }
     if (metodoEntrega === "COLEGIO" && !colegioDia) {
       toast.error("Elegí el día en que te lo llevamos al colegio");
+      return;
+    }
+    const pasado = stock.find((f) => limitaStock && enCarrito(f.id) > quedanSinCarrito(f));
+    if (pasado) {
+      toast.error(
+        `No nos queda tanto stock de ${pasado.nombre} para entregar en la zona (quedan ${quedanSinCarrito(pasado)}).${config.andreaniActivo ? " Por Andreani sí podés pedirlo." : ""}`
+      );
       return;
     }
     const items = skus
@@ -196,6 +227,40 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
         <h2 className="text-center text-3xl">
           {hayFrascosSueltos ? "Packs de dos frascos o frascos sueltos" : "Dos frascos, tu combinación"}
         </h2>
+        {stock.length > 0 && (
+          <div className="mx-auto w-full max-w-md space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+            <p className="text-center text-sm font-medium">Stock para entrega en la zona</p>
+            {stock.map((f) => {
+              const vendido = Math.min(f.usado, f.total);
+              const porcentaje = f.total > 0 ? Math.round((vendido / f.total) * 100) : 100;
+              return (
+                <div key={f.id} className="space-y-1">
+                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <span>{f.nombre}</span>
+                    <span className="text-[var(--muted-foreground)]">
+                      {quedanSinCarrito(f) > 0 ? `quedan ${quedanSinCarrito(f)} de ${f.total}` : "agotado"}
+                    </span>
+                  </div>
+                  <div
+                    className="h-3 overflow-hidden rounded-full bg-[var(--muted)]"
+                    role="progressbar"
+                    aria-label={`Stock vendido de ${f.nombre}`}
+                    aria-valuemin={0}
+                    aria-valuemax={f.total}
+                    aria-valuenow={vendido}
+                  >
+                    <div className="h-full rounded-full bg-[var(--primary)] transition-all" style={{ width: `${porcentaje}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+            {config.andreaniActivo && (
+              <p className="text-center text-xs text-[var(--muted-foreground)]">
+                Por Andreani no hay tope: se despacha desde fábrica.
+              </p>
+            )}
+          </div>
+        )}
         {hayDescuentoEfectivo && (
           <p className="mx-auto w-fit rounded-full bg-[var(--muted)] px-4 py-1.5 text-center text-sm font-medium">
             Pagando en efectivo tenés {config.descuentoEfectivo}% de descuento
@@ -227,7 +292,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
                 <div className="relative aspect-square overflow-hidden rounded-xl bg-[var(--muted)]">
                   {sku.imagenUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={sku.imagenUrl} alt={sku.nombre} className="h-full w-full object-cover" />
+                    <img src={sku.imagenUrl} alt={sku.nombre} className="h-full w-full object-cover" style={{ objectPosition: sku.imagenPosicion }} />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-[var(--muted-foreground)]">
                       giapura.
@@ -243,6 +308,12 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
                     </p>
                   )}
                 </div>
+                {!hayStockPara(sku) && (
+                  <p className="text-xs font-medium text-[var(--muted-foreground)]">
+                    {cantidad > 0 ? "Llegaste al stock disponible" : "Agotado para entrega en la zona"}
+                    {config.andreaniActivo && sku.esPack && cantidad === 0 && " (por Andreani sí)"}
+                  </p>
+                )}
                 <div className="mt-auto flex items-center justify-center gap-4">
                   <Button type="button" variant="outline" size="icon-sm" onClick={() => cambiarCantidad(sku.id, -1)}>
                     −
@@ -252,7 +323,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
                     type="button"
                     variant="outline"
                     size="icon-sm"
-                    disabled={soloPacks && !sku.esPack}
+                    disabled={(soloPacks && !sku.esPack) || !hayStockPara(sku)}
                     onClick={() => cambiarCantidad(sku.id, 1)}
                   >
                     +
@@ -270,7 +341,7 @@ export function ZonaSurPedidoForm({ config, skus }: { config: Config; skus: Sku[
         <h2 className="text-xl font-semibold">2. ¿Cómo lo recibís?</h2>
         <div className="space-y-3">
           <TarjetaOpcion activo={metodoEntrega === "ENVIO_ZONA"} onClick={() => setMetodoEntrega("ENVIO_ZONA")}>
-            <span className="font-medium">Envío a domicilio — {moneyAR(config.zonaPrecio)}</span>
+            <span className="font-medium">Envío a domicilio — {config.zonaPrecio > 0 ? moneyAR(config.zonaPrecio) : "Gratis"}</span>
             <span className="text-sm text-[var(--muted-foreground)]">Válido dentro del círculo marcado en el mapa.</span>
           </TarjetaOpcion>
           {hayColegio && (

@@ -41,6 +41,9 @@ type Producto = {
   esPack: boolean;
   precioOnline: number | null;
   precioZonaSur: number | null;
+  stockZonaSur: number | null;
+  /** frascos ya pedidos para entrega propia (sin Andreani ni cancelados) */
+  pedidosHastaAhora: number;
 };
 
 function plata(n: number) {
@@ -171,6 +174,47 @@ export function ZonaSurConfigForm({ config, productos }: { config: Config; produ
 
       <Card>
         <CardHeader>
+          <CardTitle>Stock para entrega en la zona</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="divide-y divide-border rounded-lg border border-border">
+            {productos.filter((p) => !p.esPack).length === 0 && (
+              <p className="p-4 text-sm text-muted-foreground">No hay frascos activos.</p>
+            )}
+            {productos
+              .filter((p) => !p.esPack)
+              .map((p) => (
+                <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">{p.nombre}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Pedidos hasta ahora: {p.pedidosHastaAhora} frascos
+                    </div>
+                  </div>
+                  <Input
+                    name={`stock_${p.id}`}
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={p.stockZonaSur ?? ""}
+                    placeholder="Sin límite"
+                    aria-label={`Stock para entrega en la zona de ${p.nombre}`}
+                    className="w-40"
+                  />
+                </div>
+              ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Cantidad de frascos que vas a repartir vos. Los packs descuentan de acá según los frascos que llevan (un
+            1+1 gasta un frasco de cada sabor). Con esto la página muestra una barra que se va llenando y, cuando se
+            agota, deja de aceptar pedidos de entrega en la zona. Los pedidos por Andreani no cuentan (salen de
+            fábrica) y los cancelados tampoco. Si dejás el casillero vacío, no hay barra ni límite.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Zona de envío</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -180,7 +224,7 @@ export function ZonaSurConfigForm({ config, productos }: { config: Config; produ
               <Input id="zonaNombre" name="zonaNombre" defaultValue={config.zonaNombre} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="zonaPrecio">Precio del envío</Label>
+              <Label htmlFor="zonaPrecio">Precio del envío (0 = gratis)</Label>
               <Input id="zonaPrecio" name="zonaPrecio" type="number" step="0.01" min="0" defaultValue={config.zonaPrecio} required />
             </div>
           </div>

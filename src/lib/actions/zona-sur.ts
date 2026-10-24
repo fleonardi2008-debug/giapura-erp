@@ -9,6 +9,7 @@ import { ZonaSurEstado, ZonaSurMetodoEntrega, ZonaSurMetodoPago } from "@/genera
 import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
 import { parsearTarifasAndreani } from "@/lib/zona-sur-andreani";
 import { descuentoEfectivo } from "@/lib/zona-sur-precios";
+import { leerStockZonaSur } from "@/lib/zona-sur-stock";
 
 async function requireOwner() {
   const session = await getSession();
@@ -78,6 +79,23 @@ export async function guardarZonaSurConfig(formData: FormData) {
     preciosZonaSur.push({ id, precio: numero });
   }
 
+  // Stock de cada frasco para entrega propia: campos "stock_<id>". Vacío = sin límite (sin barra).
+  const stocksZonaSur: { id: string; stock: number | null }[] = [];
+  for (const [clave, valor] of formData.entries()) {
+    if (!clave.startsWith("stock_") || typeof valor !== "string") continue;
+    const id = clave.slice("stock_".length);
+    const texto = valor.trim();
+    if (!texto) {
+      stocksZonaSur.push({ id, stock: null });
+      continue;
+    }
+    const numero = Number(texto);
+    if (!Number.isInteger(numero) || numero < 0) {
+      return { error: `El stock "${texto}" no es válido. Escribí un número entero (ej: 236).` };
+    }
+    stocksZonaSur.push({ id, stock: numero });
+  }
+
   // Si una línea de la tabla de precios está mal escrita, se avisa cuál en vez de guardarla rota.
   const { errores } = parsearTarifasAndreani(parsed.data.andreaniTarifas);
   if (errores.length > 0) {
@@ -103,6 +121,9 @@ export async function guardarZonaSurConfig(formData: FormData) {
     }),
     ...preciosZonaSur.map(({ id, precio }) =>
       prisma.sku.updateMany({ where: { id }, data: { precioZonaSur: precio } })
+    ),
+    ...stocksZonaSur.map(({ id, stock }) =>
+      prisma.sku.updateMany({ where: { id }, data: { stockZonaSur: stock } })
     ),
   ]);
 
@@ -293,6 +314,25 @@ export async function crearZonaSurPedido(formData: FormData) {
   // Las cajas de Andreani son de a dos: por ese medio solo se piden packs.
   if (data.metodoEntrega === "ANDREANI" && skus.some((s) => s.nivel !== "PACK")) {
     return { error: "Para envíos por Andreani solo se pueden pedir packs (las cajas son de a dos)" };
+  }
+
+  // Stock de lo que reparte Fran: todo menos Andreani (sale de fábrica, sin límite).
+  if (data.metodoEntrega !== "ANDREANI") {
+    const { stock, consumo } = await leerStockZonaSur();
+    const necesario: Record<string, number> = {};
+    for (const item of data.items) {
+      for (const [frascoId, n] of Object.entries(consumo[item.skuId] ?? {})) {
+        necesario[frascoId] = (necesario[frascoId] ?? 0) + n * item.cantidad;
+      }
+    }
+    for (const f of stock) {
+      const quedan = Math.max(0, f.total - f.usado);
+      if ((necesario[f.id] ?? 0) > quedan) {
+        return {
+          error: `No nos queda stock de ${f.nombre} para entregar en la zona (quedan ${quedan}).${config.andreaniActivo ? " Por Andreani sí podés pedirlo." : ""}`,
+        };
+      }
+    }
   }
 
   const totalProductos = itemsParaCrear.reduce((acc, i) => acc + i.subtotal, 0);

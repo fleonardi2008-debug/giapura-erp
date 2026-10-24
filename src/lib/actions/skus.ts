@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { put } from "@vercel/blob";
 import { prisma } from "@/lib/db";
 import { requireOwnerSession } from "@/lib/session";
 
@@ -300,6 +301,8 @@ export async function addCostoFabrica(formData: FormData) {
 const imagenSchema = z.object({
   skuId: z.string().min(1),
   imagenUrl: z.string().url("Tiene que ser un link válido (https://...)").optional().or(z.literal("")),
+  imagenPosX: z.coerce.number().int().min(0).max(100).default(50),
+  imagenPosY: z.coerce.number().int().min(0).max(100).default(50),
 });
 
 export async function updateSkuImagen(formData: FormData) {
@@ -309,14 +312,34 @@ export async function updateSkuImagen(formData: FormData) {
   const parsed = imagenSchema.safeParse({
     skuId: formData.get("skuId"),
     imagenUrl: formData.get("imagenUrl") || "",
+    imagenPosX: formData.get("imagenPosX") || 50,
+    imagenPosY: formData.get("imagenPosY") || 50,
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
 
-  const { skuId, imagenUrl } = parsed.data;
-  await prisma.sku.update({ where: { id: skuId }, data: { imagenUrl: imagenUrl || null } });
+  const { skuId } = parsed.data;
+  let imagenUrl = parsed.data.imagenUrl;
+
+  // Si subió un archivo, se guarda en Vercel Blob y se usa esa dirección (gana sobre el link escrito).
+  const archivo = formData.get("archivo");
+  if (archivo instanceof File && archivo.size > 0) {
+    if (!archivo.type.startsWith("image/")) return { error: "El archivo tiene que ser una imagen" };
+    if (archivo.size > 4 * 1024 * 1024) return { error: "La imagen pesa demasiado (máximo 4 MB)" };
+    const subido = await put(`skus/${skuId}.jpg`, archivo, {
+      access: "public",
+      addRandomSuffix: true,
+      contentType: archivo.type,
+    });
+    imagenUrl = subido.url;
+  }
+
+  await prisma.sku.update({
+    where: { id: skuId },
+    data: { imagenUrl: imagenUrl || null, imagenPosX: parsed.data.imagenPosX, imagenPosY: parsed.data.imagenPosY },
+  });
 
   revalidatePath(`/skus/${skuId}`);
   revalidatePath("/zona-sur");
