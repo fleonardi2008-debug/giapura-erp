@@ -49,6 +49,10 @@ type Config = {
 type MetodoEntrega = "ENVIO_ZONA" | "COLEGIO" | "ANDREANI";
 type MetodoPago = "TRANSFERENCIA" | "EFECTIVO";
 
+// Campos y botones pensados para el pulgar: 48 px de alto y letra de 16 px (evita el zoom automatico en iPhone).
+const CAMPO = "h-12 text-base";
+const BOTON_CANTIDAD = "size-11 rounded-xl text-xl";
+
 function moneyAR(n: number) {
   return n.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 }
@@ -67,10 +71,12 @@ function TarjetaOpcion({
   return (
     <button
       type="button"
+      role="radio"
+      aria-checked={activo}
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex w-full flex-col gap-1 rounded-2xl border-2 px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+        "flex min-h-14 w-full flex-col justify-center gap-1 rounded-2xl border-2 px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40",
         activo ? "border-[var(--primary)] bg-[var(--card)]" : "border-[var(--border)] bg-[var(--card)]/60 hover:border-[var(--muted-foreground)]"
       )}
     >
@@ -105,6 +111,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
   const totalConEnvio = subtotal - descuento + (metodoEntrega === "ENVIO_ZONA" ? config.zonaPrecio : 0);
   const hayDescuentoEfectivo = config.descuentoEfectivo > 0;
   const hayProductos = Object.values(cantidades).some((c) => c > 0);
+  const unidadesTotales = Object.values(cantidades).reduce((a, c) => a + c, 0);
   // Las cajas de Andreani son de a dos: por ese medio solo se piden packs, no frascos sueltos.
   const soloPacks = metodoEntrega === "ANDREANI";
 
@@ -207,15 +214,15 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
   }
 
   return (
-    <form action={handleSubmit} className="mx-auto max-w-2xl space-y-8 px-6 py-12">
+    <form action={handleSubmit} className="mx-auto max-w-2xl space-y-8 px-4 pt-8 sm:px-6 sm:pt-12">
       <header className="text-center">
         <img
           src="/branding/giapura-logo.png"
           alt="Giapura"
-          className="mx-auto h-16 w-auto"
+          className="mx-auto h-12 w-auto sm:h-16"
         />
         <p className="gia-mano mt-1 text-2xl text-[var(--muted-foreground)]">Pedidos Zona Sur</p>
-        <p className="mt-2 text-[var(--muted-foreground)]">
+        <p className="mt-2 text-sm text-[var(--muted-foreground)] sm:text-base">
           {hayFrascosSueltos ? "Elegí tus productos" : "Elegí tu pack"}, cómo lo recibís y cómo pagás. Coordinamos el resto
           por WhatsApp.
         </p>
@@ -226,11 +233,11 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         <p className="text-center text-sm font-semibold tracking-wide text-[var(--muted-foreground)] uppercase">
           {hayFrascosSueltos ? "1. Elegí tus productos" : "1. Elegí tu pack"}
         </p>
-        <h2 className="text-center text-3xl">
+        <h2 className="text-center text-2xl sm:text-3xl">
           {hayFrascosSueltos ? "Packs de dos frascos o frascos sueltos" : "Dos frascos, tu combinación"}
         </h2>
         {stock.length > 0 && (
-          <div className="mx-auto w-full max-w-md space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+          <div className="mx-auto w-full max-w-md space-y-2.5 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3 sm:space-y-3 sm:p-4">
             <p className="text-center text-sm font-medium">Stock para entrega en la zona</p>
             {stock.map((f) => {
               const vendido = Math.min(f.usado, f.total);
@@ -273,20 +280,20 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
             Todavía no hay productos cargados. (Se cargan en Productos (SKU) del panel.)
           </p>
         )}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
           {skus.map((sku, idx) => {
             const cantidad = cantidades[sku.id] ?? 0;
             const primerSuelto = !sku.esPack && (idx === 0 || skus[idx - 1].esPack);
             return (
               <Fragment key={sku.id}>
                 {primerSuelto && (
-                  <h3 className="col-span-full pt-2 text-center text-2xl">
+                  <h3 className="col-span-2 pt-2 text-center text-2xl lg:col-span-3">
                     {idx === 0 ? "Frascos" : "O un frasco suelto"}
                   </h3>
                 )}
               <div
                 className={cn(
-                  "flex flex-col gap-3 rounded-2xl border-2 bg-[var(--card)] p-4 text-center transition-colors",
+                  "flex flex-col gap-2 rounded-2xl border-2 bg-[var(--card)] p-2.5 text-center transition-colors sm:gap-3 sm:p-4",
                   cantidad > 0 ? "border-[var(--primary)]" : "border-[var(--border)]",
                   soloPacks && !sku.esPack && "opacity-50"
                 )}
@@ -301,11 +308,11 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                     </div>
                   )}
                 </div>
-                <h3 className="gia-pack-nombre text-xl">{sku.nombre}</h3>
+                <h3 className="gia-pack-nombre text-base leading-tight sm:text-xl">{sku.nombre}</h3>
                 <div>
-                  <p className="text-lg font-semibold">{moneyAR(sku.precioVenta)}</p>
+                  <p className="text-base font-semibold sm:text-lg">{moneyAR(sku.precioVenta)}</p>
                   {hayDescuentoEfectivo && (
-                    <p className="text-sm text-[var(--muted-foreground)]">
+                    <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">
                       En efectivo: <strong>{moneyAR(precioEnEfectivo(sku.precioVenta, config.descuentoEfectivo))}</strong>
                     </p>
                   )}
@@ -316,16 +323,26 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                     {config.andreaniActivo && sku.esPack && cantidad === 0 && " (por Andreani sí)"}
                   </p>
                 )}
-                <div className="mt-auto flex items-center justify-center gap-4">
-                  <Button type="button" variant="outline" size="icon-sm" onClick={() => cambiarCantidad(sku.id, -1)}>
-                    −
-                  </Button>
-                  <span className="w-4 text-center font-medium">{cantidad}</span>
+                <div className="mt-auto flex items-center justify-between gap-1 sm:justify-center sm:gap-4">
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon-sm"
+                    className={BOTON_CANTIDAD}
+                    disabled={cantidad === 0}
+                    aria-label={`Quitar una unidad de ${sku.nombre}`}
+                    onClick={() => cambiarCantidad(sku.id, -1)}
+                  >
+                    −
+                  </Button>
+                  <span className="min-w-6 text-center text-lg font-semibold" aria-live="polite">
+                    {cantidad}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={BOTON_CANTIDAD}
                     disabled={(soloPacks && !sku.esPack) || !hayStockPara(sku)}
+                    aria-label={`Sumar una unidad de ${sku.nombre}`}
                     onClick={() => cambiarCantidad(sku.id, 1)}
                   >
                     +
@@ -341,7 +358,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
       {/* Entrega */}
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">2. ¿Cómo lo recibís?</h2>
-        <div className="space-y-3">
+        <div className="space-y-3" role="radiogroup" aria-label="Cómo lo recibís">
           <TarjetaOpcion activo={metodoEntrega === "ENVIO_ZONA"} onClick={() => setMetodoEntrega("ENVIO_ZONA")}>
             <span className="font-medium">Envío a domicilio — {config.zonaPrecio > 0 ? moneyAR(config.zonaPrecio) : "Gratis"}</span>
             <span className="text-sm text-[var(--muted-foreground)]">Válido dentro del círculo marcado en el mapa.</span>
@@ -385,8 +402,9 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
               }}
               placeholder="Tu código postal (ej: 1878)"
               autoComplete="postal-code"
+              inputMode="numeric"
               maxLength={8}
-              className="max-w-56"
+              className={cn(CAMPO, "sm:max-w-56")}
             />
             <p aria-live="polite" className="min-h-5 text-sm font-medium">
               {mensajeEstimado}
@@ -398,9 +416,9 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         )}
 
         {metodoEntrega === "COLEGIO" && hayColegio && (
-          <div className="space-y-2 pt-1" role="group" aria-label="Día de entrega en el colegio">
+          <div className="space-y-2 pt-1">
             <p className="text-sm font-medium">¿Qué día te lo llevamos?</p>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Día de entrega en el colegio">
               {config.colegioDias.map((dia) => (
                 <TarjetaOpcion key={dia} activo={colegioDia === dia} onClick={() => setColegioDia(dia)}>
                   <span className="font-medium">{dia}</span>
@@ -426,6 +444,8 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                 value={direccion}
                 onChange={(e) => setDireccion(e.target.value)}
                 placeholder="Calle, número, localidad"
+                autoComplete="street-address"
+                className={CAMPO}
                 required
               />
             </div>
@@ -436,7 +456,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
       {/* Pago */}
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">3. ¿Cómo pagás?</h2>
-        <div className="space-y-3">
+        <div className="space-y-3" role="radiogroup" aria-label="Cómo pagás">
           <TarjetaOpcion activo={metodoPago === "TRANSFERENCIA"} onClick={() => setMetodoPago("TRANSFERENCIA")}>
             <span className="font-medium">Transferencia</span>
           </TarjetaOpcion>
@@ -465,6 +485,8 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
               id="pagaCon"
               name="pagaCon"
               type="number"
+              inputMode="numeric"
+              className={CAMPO}
               min={totalConEnvio}
               step="1"
               placeholder={`Ej: ${Math.ceil(totalConEnvio / 1000) * 1000}`}
@@ -486,7 +508,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
             )}
             <div className="space-y-2">
               <Label htmlFor="comprobante">Comprobante de la transferencia</Label>
-              <Input id="comprobante" name="comprobante" type="file" accept="image/*" required />
+              <Input id="comprobante" name="comprobante" type="file" accept="image/*" className="h-12 pt-2.5 text-base" required />
             </div>
           </div>
         )}
@@ -498,34 +520,41 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="clienteNombre">Nombre y apellido</Label>
-            <Input id="clienteNombre" name="clienteNombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+            <Input id="clienteNombre" name="clienteNombre" autoComplete="name" className={CAMPO} value={nombre} onChange={(e) => setNombre(e.target.value)} required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="clienteEmail">Mail</Label>
-            <Input id="clienteEmail" name="clienteEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Input id="clienteEmail" name="clienteEmail" type="email" inputMode="email" autoComplete="email" className={CAMPO} value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="clienteTelefono">Teléfono (WhatsApp)</Label>
-            <Input id="clienteTelefono" name="clienteTelefono" type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} required />
+            <Input id="clienteTelefono" name="clienteTelefono" type="tel" inputMode="tel" autoComplete="tel" className={CAMPO} value={telefono} onChange={(e) => setTelefono(e.target.value)} required />
           </div>
         </div>
       </section>
 
-      <div className="flex items-center justify-between rounded-2xl bg-[var(--muted)] px-4 py-3">
-        <span className="font-medium">Total</span>
-        <span className="text-right">
-          {descuento > 0 && (
-            <span className="block text-sm text-[var(--muted-foreground)]">
-              Incluye {config.descuentoEfectivo}% de descuento por pagar en efectivo (−{moneyAR(descuento)})
+      {/* Barra fija abajo: el total y el boton siempre a mano, sin scrollear hasta el final. */}
+      <div className="sticky bottom-0 -mx-4 border-t border-[var(--border)] bg-[var(--background)]/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:mx-0 sm:rounded-t-2xl">
+        <div className="mb-2 flex items-end justify-between gap-3">
+          <span className="text-sm text-[var(--muted-foreground)]">
+            {unidadesTotales > 0 ? `${unidadesTotales} ${unidadesTotales === 1 ? "producto" : "productos"}` : "Tu pedido"}
+            {descuento > 0 && (
+              <span className="block text-xs">
+                Incluye {config.descuentoEfectivo}% de descuento por efectivo (−{moneyAR(descuento)})
+              </span>
+            )}
+          </span>
+          <span className="text-right">
+            <span className="block text-xs text-[var(--muted-foreground)]">Total</span>
+            <span className="text-2xl leading-none font-semibold" aria-live="polite">
+              {moneyAR(totalConEnvio)}
             </span>
-          )}
-          <span className="text-xl font-semibold">{moneyAR(totalConEnvio)}</span>
-        </span>
+          </span>
+        </div>
+        <Button type="submit" size="lg" disabled={pending} className="h-12 w-full text-base">
+          {pending ? "Enviando..." : "Confirmar pedido"}
+        </Button>
       </div>
-
-      <Button type="submit" size="lg" disabled={pending} className="w-full">
-        {pending ? "Enviando..." : "Confirmar pedido"}
-      </Button>
     </form>
   );
 }

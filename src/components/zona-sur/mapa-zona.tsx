@@ -51,6 +51,11 @@ function SeguirCentro({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
+// En el celular un dedo tiene que scrollear la pagina (no arrastrar el mapa); con dos dedos si se mueve.
+function esTactil() {
+  return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+}
+
 export function MapaZona({ lat, lng, radioKm, onMoverCentro, colorCirculo = "#4A1C05", alto = "24rem" }: Props) {
   // El zoom se ajusta solo, mas cerca cuanto mas chico es el radio.
   const zoomInicial = useMemo(() => {
@@ -62,7 +67,7 @@ export function MapaZona({ lat, lng, radioKm, onMoverCentro, colorCirculo = "#4A
 
   return (
     <div style={{ height: alto }} className="overflow-hidden rounded-xl border">
-      <MapContainer center={[lat, lng]} zoom={zoomInicial} style={{ height: "100%", width: "100%" }} scrollWheelZoom={!!onMoverCentro}>
+      <MapContainer center={[lat, lng]} zoom={zoomInicial} style={{ height: "100%", width: "100%" }} scrollWheelZoom={!!onMoverCentro} dragging={!!onMoverCentro || !esTactil()}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

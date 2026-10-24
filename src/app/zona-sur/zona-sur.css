@@ -46,3 +46,8 @@
 .gia-zona-sur [data-slot="button"].bg-primary:hover {
   background: #351203;
 }
+
+/* La barra fija de abajo (total + confirmar) no tiene que tapar el campo que se está completando. */
+html:has(.gia-zona-sur) {
+  scroll-padding-bottom: 9rem;
+}
