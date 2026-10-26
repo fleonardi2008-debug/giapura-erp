@@ -13,19 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { updateSkuImagen } from "@/lib/actions/skus";
-
-/** Achica la foto del celu/cámara (suelen pesar varios MB) a algo liviano para la página: máx. 1200 px, JPG. */
-async function achicarImagen(archivo: File): Promise<File> {
-  const bitmap = await createImageBitmap(archivo);
-  const escala = Math.min(1, 1200 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * escala);
-  canvas.height = Math.round(bitmap.height * escala);
-  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.85));
-  if (!blob) throw new Error("No se pudo procesar la imagen");
-  return new File([blob], "foto.jpg", { type: "image/jpeg" });
-}
+import { achicarImagen } from "@/lib/achicar-imagen";
 
 export function EditarImagenDialog({
   skuId,

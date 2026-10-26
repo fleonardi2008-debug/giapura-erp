@@ -10,6 +10,7 @@ import { crearZonaSurPedido } from "@/lib/actions/zona-sur";
 import { estimarEnvioAndreaniCercano, numeroDeCodigoPostal, type TarifaAndreani } from "@/lib/zona-sur-andreani";
 import { descuentoEfectivo as descuentoEnEfectivo, precioEnEfectivo } from "@/lib/zona-sur-precios";
 import { distanciaKm, ubicarDireccion, type Punto } from "@/lib/zona-sur-geo";
+import { achicarImagen } from "@/lib/achicar-imagen";
 import { cn } from "@/lib/utils";
 
 const MapaZona = dynamic(() => import("./mapa-zona").then((m) => m.MapaZona), {
@@ -275,6 +276,14 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
       toast.error("Elegí el día en que te lo llevamos al colegio");
       return;
     }
+    if (metodoPago === "EFECTIVO") {
+      const pagaCon = Number(formData.get("pagaCon"));
+      if (!pagaCon || pagaCon < totalConEnvio) {
+        toast.error(`Indicá con cuánto pagás: tiene que ser al menos ${moneyAR(totalConEnvio)}`);
+        document.getElementById("pagaCon")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+    }
     const pasado = stock.find((f) => limitaStock && enCarrito(f.id) > quedanSinCarrito(f));
     if (pasado) {
       toast.error(
@@ -303,12 +312,26 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         formData.set("lat", String(v.punto.lat));
         formData.set("lng", String(v.punto.lng));
       }
-      const result = await crearZonaSurPedido(formData);
-      if (result?.error) {
-        toast.error(result.error);
-        return;
+      try {
+        // La foto del comprobante del celular pesa varios MB: se achica antes de mandarla.
+        const comprobante = formData.get("comprobante");
+        if (comprobante instanceof File && comprobante.size > 0 && comprobante.type.startsWith("image/")) {
+          try {
+            formData.set("comprobante", await achicarImagen(comprobante, 1600, 0.8));
+          } catch {
+            // Si no se puede achicar, se manda como está (el servidor avisa si es demasiado grande).
+          }
+        }
+        const result = await crearZonaSurPedido(formData);
+        if (result?.error) {
+          toast.error(result.error);
+          return;
+        }
+        setEnviado(true);
+      } catch {
+        // Un fallo del servidor no tiene que dejar al cliente frente a una pantalla de error en blanco.
+        toast.error("No pudimos enviar tu pedido. Revisá tu conexión y probá de nuevo; si sigue, escribinos por WhatsApp.");
       }
-      setEnviado(true);
     });
   }
 

@@ -369,24 +369,24 @@ export async function crearZonaSurPedido(formData: FormData) {
   const skus = await prisma.sku.findMany({
     where: { id: { in: data.items.map((i) => i.skuId) }, activo: true },
   });
-  const itemsParaCrear = data.items.map((item) => {
+  const itemsParaCrear = [];
+  for (const item of data.items) {
     const sku = skus.find((s) => s.id === item.skuId);
     // Precio de Zona Sur si está cargado; si no, el precio online de siempre.
     const precioBase = sku?.precioZonaSur ?? sku?.precioVenta;
-    if (!sku || !precioBase) throw new Error("Uno de los productos elegidos ya no está disponible");
     // Los frascos sueltos solo se pueden pedir si están habilitados en la configuración.
-    if (sku.nivel !== "PACK" && !config.frascosSueltos) {
-      throw new Error("Uno de los productos elegidos ya no está disponible");
+    if (!sku || !precioBase || (sku.nivel !== "PACK" && !config.frascosSueltos)) {
+      return { error: "Uno de los productos elegidos ya no está disponible. Recargá la página y volvé a armar tu pedido." };
     }
     const precioUnitario = Number(precioBase);
-    return {
+    itemsParaCrear.push({
       skuId: sku.id,
       nombre: sku.nombre,
       cantidad: item.cantidad,
       precioUnitario,
       subtotal: precioUnitario * item.cantidad,
-    };
-  });
+    });
+  }
 
   // Las cajas de Andreani son de a dos: por ese medio solo se piden packs.
   if (data.metodoEntrega === "ANDREANI" && skus.some((s) => s.nivel !== "PACK")) {
@@ -439,11 +439,16 @@ export async function crearZonaSurPedido(formData: FormData) {
 
   let comprobanteUrl: string | null = null;
   if (comprobante instanceof File && comprobante.size > 0) {
-    const subido = await put(`zona-sur/comprobantes/${Date.now()}-${comprobante.name}`, comprobante, {
-      access: "public",
-      addRandomSuffix: true,
-    });
-    comprobanteUrl = subido.url;
+    try {
+      const subido = await put(`zona-sur/comprobantes/${Date.now()}-${comprobante.name}`, comprobante, {
+        access: "public",
+        addRandomSuffix: true,
+      });
+      comprobanteUrl = subido.url;
+    } catch (error) {
+      console.error("No se pudo subir el comprobante", error);
+      return { error: "No pudimos subir el comprobante. Probá con otra foto o con una captura de pantalla." };
+    }
   }
 
   await prisma.zonaSurPedido.create({
