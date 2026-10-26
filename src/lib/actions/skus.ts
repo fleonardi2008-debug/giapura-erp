@@ -300,7 +300,14 @@ export async function addCostoFabrica(formData: FormData) {
 
 const imagenSchema = z.object({
   skuId: z.string().min(1),
-  imagenUrl: z.string().url("Tiene que ser un link válido (https://...)").optional().or(z.literal("")),
+  // Un link https://... o la dirección interna de una foto ya subida desde acá.
+  imagenUrl: z
+    .string()
+    .refine(
+      (v) => v === "" || v.startsWith("/api/public/imagen-producto?p=skus%2F") || z.string().url().safeParse(v).success,
+      "Tiene que ser un link válido (https://...)"
+    )
+    .optional(),
   imagenPosX: z.coerce.number().int().min(0).max(100).default(50),
   imagenPosY: z.coerce.number().int().min(0).max(100).default(50),
   imagenZoom: z.coerce.number().int().min(100).max(300).default(100),
@@ -330,12 +337,13 @@ export async function updateSkuImagen(formData: FormData) {
   if (archivo instanceof File && archivo.size > 0) {
     if (!archivo.type.startsWith("image/")) return { error: "El archivo tiene que ser una imagen" };
     if (archivo.size > 4 * 1024 * 1024) return { error: "La imagen pesa demasiado (máximo 4 MB)" };
+    // El almacén es privado: la foto se sirve desde /api/public/imagen-producto (solo la carpeta skus/).
     const subido = await put(`skus/${skuId}.jpg`, archivo, {
-      access: "public",
+      access: "private",
       addRandomSuffix: true,
       contentType: archivo.type,
     });
-    imagenUrl = subido.url;
+    imagenUrl = `/api/public/imagen-producto?p=${encodeURIComponent(subido.pathname)}`;
   }
 
   await prisma.sku.update({

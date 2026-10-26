@@ -440,11 +440,13 @@ export async function crearZonaSurPedido(formData: FormData) {
   let comprobanteUrl: string | null = null;
   if (comprobante instanceof File && comprobante.size > 0) {
     try {
-      const subido = await put(`zona-sur/comprobantes/${Date.now()}-${comprobante.name}`, comprobante, {
-        access: "public",
+      // El almacén es privado: se guarda la ruta del archivo y se lo ve desde /api/comprobante (solo dueño).
+      const subido = await put(`zona-sur/comprobantes/${Date.now()}.jpg`, comprobante, {
+        access: "private",
         addRandomSuffix: true,
+        contentType: comprobante.type || "image/jpeg",
       });
-      comprobanteUrl = subido.url;
+      comprobanteUrl = subido.pathname;
     } catch (error) {
       console.error("No se pudo subir el comprobante", error);
       return { error: "No pudimos subir el comprobante. Probá con otra foto o con una captura de pantalla." };

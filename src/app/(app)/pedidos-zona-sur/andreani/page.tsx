@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { enlaceComprobante } from "@/lib/comprobante";
 import { prisma } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
 import { AndreaniLinkForm } from "@/components/zona-sur/andreani-link-form";
@@ -58,7 +59,7 @@ export default async function AndreaniPage() {
                       {pedido.comprobanteUrl && (
                         <>
                           {" · "}
-                          <a href={pedido.comprobanteUrl} target="_blank" rel="noopener noreferrer" className="underline">
+                          <a href={enlaceComprobante(pedido.comprobanteUrl)} target="_blank" rel="noopener noreferrer" className="underline">
                             Ver comprobante
                           </a>
                         </>

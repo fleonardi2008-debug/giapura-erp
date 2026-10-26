@@ -75,7 +75,7 @@ export function EditarImagenDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="imagenUrl">O pegá el link de una foto</Label>
-            <Input id="imagenUrl" name="imagenUrl" type="url" placeholder="https://..." defaultValue={imagenUrl ?? ""} />
+            <Input id="imagenUrl" name="imagenUrl" type="text" inputMode="url" placeholder="https://..." defaultValue={imagenUrl ?? ""} />
             <p className="text-xs text-muted-foreground">
               Se usa en páginas de venta propias, como /zona-sur. Podés usar el mismo link de la foto que ya
               tenés subida en Shopify (Contenido → Archivos → clic derecho en la imagen → Copiar dirección del

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { enlaceComprobante } from "@/lib/comprobante";
 import { prisma } from "@/lib/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { buttonVariants } from "@/components/ui/button";
@@ -107,7 +108,7 @@ export default async function PedidosZonaSurPage() {
                   <TableCell className="text-sm">
                     <div>{PAGO_LABEL[pedido.metodoPago] ?? pedido.metodoPago}</div>
                     {pedido.comprobanteUrl && (
-                      <a href={pedido.comprobanteUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline">
+                      <a href={enlaceComprobante(pedido.comprobanteUrl)} target="_blank" rel="noopener noreferrer" className="text-xs underline">
                         Ver comprobante
                       </a>
                     )}
