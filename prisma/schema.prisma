@@ -569,6 +569,7 @@ enum ZonaSurMetodoEntrega {
   PUNTO_BERNAL
   COLEGIO
   ANDREANI
+  RETIRO_CASA
 }
 
 enum ZonaSurMetodoPago {

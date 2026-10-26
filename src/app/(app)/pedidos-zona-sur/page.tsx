@@ -2,6 +2,7 @@ import Link from "next/link";
 import { enlaceComprobante } from "@/lib/comprobante";
 import { filasDatosAndreani } from "@/lib/datos-andreani";
 import { DatosEnvioBoton } from "@/components/zona-sur/datos-envio-boton";
+import { NotaPedido, PasarARetiroCasa } from "@/components/zona-sur/acciones-pedido";
 import { prisma } from "@/lib/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const ENTREGA_LABEL: Record<string, string> = {
   PUNTO_BERNAL: "Retiro en Bernal",
   COLEGIO: "Entrega en el colegio",
   ANDREANI: "Envío por Andreani",
+  RETIRO_CASA: "Retiro por la casa",
 };
 
 const PAGO_LABEL: Record<string, string> = {
@@ -102,6 +104,7 @@ export default async function PedidosZonaSurPage() {
                         {item.cantidad} × {item.nombre}
                       </div>
                     ))}
+                    <NotaPedido pedidoId={pedido.id} nota={pedido.nota} />
                   </TableCell>
                   <TableCell className="text-sm">
                     <div>{ENTREGA_LABEL[pedido.metodoEntrega] ?? pedido.metodoEntrega}</div>
@@ -120,6 +123,7 @@ export default async function PedidosZonaSurPage() {
                       pedido.direccion && <div className="text-xs text-muted-foreground">{pedido.direccion}</div>
                     )}
                     {pedido.puntoElegido && <div className="text-xs text-muted-foreground">{pedido.puntoElegido}</div>}
+                    {pedido.metodoEntrega !== "RETIRO_CASA" && <PasarARetiroCasa pedidoId={pedido.id} />}
                   </TableCell>
                   <TableCell className="text-sm">
                     <div>{PAGO_LABEL[pedido.metodoPago] ?? pedido.metodoPago}</div>

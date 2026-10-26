@@ -28,6 +28,19 @@ export default async function ZonaSurPage() {
 
   // Siempre se ofrecen los packs; los frascos sueltos solo si Fran lo prendió en la configuración.
   const habilitados = skus.filter((s) => s.nivel === "PACK" || config.frascosSueltos);
+  // Cuánto se ahorra comprando el pack en vez de los frascos sueltos (a precio de Zona Sur). Solo si hay ahorro.
+  const precioDe = (id: string) => {
+    const s = skus.find((x) => x.id === id);
+    return s ? Number(s.precioZonaSur ?? s.precioVenta ?? 0) : 0;
+  };
+  const ahorroDe = (s: (typeof skus)[number]) => {
+    if (s.nivel !== "PACK") return null;
+    const partes = Object.entries(consumo[s.id] ?? {});
+    if (partes.length === 0 || partes.some(([id]) => precioDe(id) <= 0)) return null;
+    const suelto = partes.reduce((acc, [id, n]) => acc + n * precioDe(id), 0);
+    const monto = suelto - Number(s.precioZonaSur ?? s.precioVenta);
+    return monto > 0 ? { monto, pct: Math.round((monto / suelto) * 100) } : null;
+  };
   const visibles = [...habilitados.filter((s) => s.nivel === "PACK"), ...habilitados.filter((s) => s.nivel !== "PACK")];
 
   return (
@@ -57,6 +70,7 @@ export default async function ZonaSurPage() {
           imagenZoom: s.imagenZoom / 100,
           esPack: s.nivel === "PACK",
           consumo: consumo[s.id] ?? {},
+          ahorro: ahorroDe(s),
         }))}
         stock={stock}
       />

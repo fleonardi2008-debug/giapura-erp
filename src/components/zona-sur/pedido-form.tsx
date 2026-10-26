@@ -30,6 +30,8 @@ type Sku = {
   esPack: boolean;
   /** frascoId → cuántos frascos de ese gasta una unidad (un pack gasta lo de su composición) */
   consumo: Record<string, number>;
+  /** Lo que se ahorra comprando este pack en vez de los frascos sueltos (null si no hay ahorro) */
+  ahorro: { monto: number; pct: number } | null;
 };
 type StockFrasco = { id: string; nombre: string; total: number; usado: number };
 type Config = {
@@ -484,6 +486,12 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                     <div className="flex h-full w-full items-center justify-center text-[var(--muted-foreground)]">
                       giapura.
                     </div>
+                  )}
+                  {sku.ahorro && (
+                    <span className="absolute top-2 left-2 rounded-xl bg-[var(--accent)] px-2 py-1 text-left leading-tight font-bold text-[var(--accent-foreground)] shadow-md">
+                      <span className="block text-sm">{sku.ahorro.pct}% OFF</span>
+                      <span className="block text-[10px] font-semibold">ahorrás {moneyAR(sku.ahorro.monto)}</span>
+                    </span>
                   )}
                   {cantidad > 0 && (
                     <span

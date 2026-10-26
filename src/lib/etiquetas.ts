@@ -50,6 +50,7 @@ export const ENTREGA_LABEL: Record<ZonaSurMetodoEntrega, string> = {
   PUNTO_BERNAL: "Retiro en Bernal",
   COLEGIO: "Entrega en el colegio",
   ANDREANI: "Envío por Andreani",
+  RETIRO_CASA: "Retiro por la casa",
 };
 
 /** Código corto para identificar el pedido a simple vista (ej: "K3F9Q"). */

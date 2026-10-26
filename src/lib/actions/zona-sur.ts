@@ -489,3 +489,47 @@ export async function crearZonaSurPedido(formData: FormData) {
   revalidatePath("/pedidos-zona-sur/colegio");
   return { success: true };
 }
+
+/** Guarda (o borra, si queda vacía) la nota interna de un pedido. Solo la ve el dueño en el administrador. */
+export async function guardarNotaZonaSurPedido(pedidoId: string, nota: string) {
+  await requireOwner();
+  const limpia = nota.trim();
+  if (limpia.length > 1000) return { error: "La nota es demasiado larga (máximo 1000 caracteres)" };
+  await prisma.zonaSurPedido.update({ where: { id: pedidoId }, data: { nota: limpia || null } });
+  revalidatePath("/pedidos-zona-sur");
+  return { success: true };
+}
+
+/**
+ * Pasa un pedido a "Retiro por la casa" (lo coordina el dueño con el cliente; no existe en la página pública).
+ * Si el pedido llevaba envío cobrado (Andreani o un envío con precio), se descuenta del total.
+ */
+export async function pasarPedidoARetiroCasa(pedidoId: string) {
+  await requireOwner();
+  const [pedido, config] = await Promise.all([
+    prisma.zonaSurPedido.findUnique({ where: { id: pedidoId } }),
+    prisma.zonaSurConfig.upsert({ where: { id: "singleton" }, create: { id: "singleton" }, update: {} }),
+  ]);
+  if (!pedido) return { error: "No encontré el pedido" };
+  if (pedido.metodoEntrega === "RETIRO_CASA") return { error: "Ese pedido ya es retiro por la casa" };
+
+  let total = Number(pedido.total) - Number(pedido.costoEnvio);
+  if (pedido.metodoEntrega === "ENVIO_ZONA") total -= Number(config.zonaPrecio);
+
+  await prisma.zonaSurPedido.update({
+    where: { id: pedidoId },
+    data: {
+      metodoEntrega: "RETIRO_CASA",
+      direccion: null,
+      colegioDia: null,
+      puntoElegido: "Retiro por la casa (lo coordinás vos con el cliente)",
+      costoEnvio: 0,
+      envioAConfirmar: false,
+      total: Math.max(0, total),
+    },
+  });
+  revalidatePath("/pedidos-zona-sur");
+  revalidatePath("/pedidos-zona-sur/andreani");
+  revalidatePath("/pedidos-zona-sur/colegio");
+  return { success: true };
+}
