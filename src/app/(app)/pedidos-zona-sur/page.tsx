@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { enlaceComprobante } from "@/lib/comprobante";
+import { filasDatosAndreani } from "@/lib/datos-andreani";
+import { DatosEnvioBoton } from "@/components/zona-sur/datos-envio-boton";
 import { prisma } from "@/lib/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { buttonVariants } from "@/components/ui/button";
@@ -104,37 +106,16 @@ export default async function PedidosZonaSurPage() {
                   <TableCell className="text-sm">
                     <div>{ENTREGA_LABEL[pedido.metodoEntrega] ?? pedido.metodoEntrega}</div>
                     {pedido.metodoEntrega === "ANDREANI" && pedido.andreaniModalidad ? (
-                      <dl className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                      <div className="space-y-0.5 text-xs text-muted-foreground">
+                        <div>{pedido.andreaniModalidad === "SUCURSAL" ? "A sucursal" : "A domicilio"} · CP {pedido.envioCp}</div>
                         <div>
-                          <dt className="inline font-medium text-foreground">Tipo: </dt>
-                          <dd className="inline">
-                            {pedido.andreaniModalidad === "SUCURSAL" ? "A sucursal" : "A domicilio"}
-                          </dd>
+                          Envío:{" "}
+                          {pedido.envioAConfirmar
+                            ? "a confirmar con el cliente"
+                            : `$${Number(pedido.costoEnvio).toLocaleString("es-AR")} (ya cobrado en el total)`}
                         </div>
-                        {[
-                          ["Calle", pedido.envioCalle],
-                          ["Número", pedido.envioNumero],
-                          ["Piso / Dpto", pedido.envioPiso],
-                          ["Código postal", pedido.envioCp],
-                          ["Ciudad", pedido.envioCiudad],
-                          ["Provincia", pedido.envioProvincia],
-                        ]
-                          .filter(([, valor]) => valor)
-                          .map(([etiqueta, valor]) => (
-                            <div key={etiqueta}>
-                              <dt className="inline font-medium text-foreground">{etiqueta}: </dt>
-                              <dd className="inline">{valor}</dd>
-                            </div>
-                          ))}
-                        <div>
-                          <dt className="inline font-medium text-foreground">Envío: </dt>
-                          <dd className="inline">
-                            {pedido.envioAConfirmar
-                              ? "a confirmar con el cliente"
-                              : `$${Number(pedido.costoEnvio).toLocaleString("es-AR")} (ya cobrado en el total)`}
-                          </dd>
-                        </div>
-                      </dl>
+                        <DatosEnvioBoton filas={filasDatosAndreani(pedido)} cliente={pedido.clienteNombre} />
+                      </div>
                     ) : (
                       pedido.direccion && <div className="text-xs text-muted-foreground">{pedido.direccion}</div>
                     )}

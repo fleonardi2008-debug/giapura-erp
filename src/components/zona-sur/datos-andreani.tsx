@@ -19,20 +19,24 @@ async function copiar(texto: string, aviso: string) {
  * Los datos del pedido en el mismo orden que el formulario "Nueva orden" de RedChat,
  * con un botón para copiar cada uno (o todos juntos).
  */
-export function DatosAndreani({ filas }: { filas: Fila[] }) {
+export function DatosAndreani({ filas, plegable = true }: { filas: Fila[]; plegable?: boolean }) {
   const [abierto, setAbierto] = useState(true);
   const visibles = filas.filter((f) => f.valor.trim());
   return (
     <div className="space-y-2 rounded-lg bg-muted/50 p-3">
       <div className="flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setAbierto((a) => !a)}
-          aria-expanded={abierto}
-          className="text-sm font-medium"
-        >
-          Datos para cargar en RedChat {abierto ? "▴" : "▾"}
-        </button>
+        {plegable ? (
+          <button
+            type="button"
+            onClick={() => setAbierto((a) => !a)}
+            aria-expanded={abierto}
+            className="text-sm font-medium"
+          >
+            Datos para cargar en RedChat {abierto ? "▴" : "▾"}
+          </button>
+        ) : (
+          <span className="text-sm font-medium">Datos para cargar en RedChat</span>
+        )}
         <Button
           type="button"
           variant="outline"
@@ -42,7 +46,7 @@ export function DatosAndreani({ filas }: { filas: Fila[] }) {
           Copiar todo
         </Button>
       </div>
-      {abierto && (
+      {(abierto || !plegable) && (
         <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
           {visibles.map((f) => (
             <div key={f.etiqueta} className="flex items-center justify-between gap-2 border-b border-border/60 py-1">
