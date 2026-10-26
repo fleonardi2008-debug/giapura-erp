@@ -92,6 +92,7 @@ export default async function PedidosZonaSurPage() {
                     <div className="font-medium">{pedido.clienteNombre}</div>
                     <div className="text-xs text-muted-foreground">{pedido.clienteEmail}</div>
                     <div className="text-xs text-muted-foreground">{pedido.clienteTelefono}</div>
+                    {pedido.clienteDni && <div className="text-xs text-muted-foreground">DNI {pedido.clienteDni}</div>}
                   </TableCell>
                   <TableCell className="text-sm">
                     {pedido.items.map((item) => (
@@ -102,7 +103,41 @@ export default async function PedidosZonaSurPage() {
                   </TableCell>
                   <TableCell className="text-sm">
                     <div>{ENTREGA_LABEL[pedido.metodoEntrega] ?? pedido.metodoEntrega}</div>
-                    {pedido.direccion && <div className="text-xs text-muted-foreground">{pedido.direccion}</div>}
+                    {pedido.metodoEntrega === "ANDREANI" && pedido.andreaniModalidad ? (
+                      <dl className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                        <div>
+                          <dt className="inline font-medium text-foreground">Tipo: </dt>
+                          <dd className="inline">
+                            {pedido.andreaniModalidad === "SUCURSAL" ? "A sucursal" : "A domicilio"}
+                          </dd>
+                        </div>
+                        {[
+                          ["Calle", pedido.envioCalle],
+                          ["Número", pedido.envioNumero],
+                          ["Piso / Dpto", pedido.envioPiso],
+                          ["Código postal", pedido.envioCp],
+                          ["Ciudad", pedido.envioCiudad],
+                          ["Provincia", pedido.envioProvincia],
+                        ]
+                          .filter(([, valor]) => valor)
+                          .map(([etiqueta, valor]) => (
+                            <div key={etiqueta}>
+                              <dt className="inline font-medium text-foreground">{etiqueta}: </dt>
+                              <dd className="inline">{valor}</dd>
+                            </div>
+                          ))}
+                        <div>
+                          <dt className="inline font-medium text-foreground">Envío: </dt>
+                          <dd className="inline">
+                            {pedido.envioAConfirmar
+                              ? "a confirmar con el cliente"
+                              : `$${Number(pedido.costoEnvio).toLocaleString("es-AR")} (ya cobrado en el total)`}
+                          </dd>
+                        </div>
+                      </dl>
+                    ) : (
+                      pedido.direccion && <div className="text-xs text-muted-foreground">{pedido.direccion}</div>
+                    )}
                     {pedido.puntoElegido && <div className="text-xs text-muted-foreground">{pedido.puntoElegido}</div>}
                   </TableCell>
                   <TableCell className="text-sm">
