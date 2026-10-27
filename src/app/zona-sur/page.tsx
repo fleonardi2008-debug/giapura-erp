@@ -39,7 +39,12 @@ export default async function ZonaSurPage() {
     if (partes.length === 0 || partes.some(([id]) => precioDe(id) <= 0)) return null;
     const suelto = partes.reduce((acc, [id, n]) => acc + n * precioDe(id), 0);
     const monto = suelto - Number(s.precioZonaSur ?? s.precioVenta);
-    return monto > 0 ? { monto, pct: Math.round((monto / suelto) * 100) } : null;
+    if (monto <= 0) return null;
+    // Porcentaje redondeado al múltiplo de 5 más cercano si queda a un punto o menos (9,4% se muestra como 10%);
+    // si no, el entero más cercano. El monto en pesos que se muestra es siempre el real.
+    const real = (monto / suelto) * 100;
+    const aCinco = Math.round(real / 5) * 5;
+    return { monto, pct: Math.abs(aCinco - real) <= 1 ? aCinco : Math.round(real) };
   };
   const visibles = [...habilitados.filter((s) => s.nivel === "PACK"), ...habilitados.filter((s) => s.nivel !== "PACK")];
 
