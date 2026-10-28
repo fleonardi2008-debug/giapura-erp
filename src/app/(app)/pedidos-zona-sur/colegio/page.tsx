@@ -1,7 +1,11 @@
 import Link from "next/link";
+import { BuscadorPedidos } from "@/components/zona-sur/buscador-pedidos";
 import { prisma } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
 import { parsearDiasColegio, whatsappUrl } from "@/lib/zona-sur-colegio";
+import { EstadoPedidoSelect } from "@/components/zona-sur/estado-pedido-select";
+import { NotaPedido } from "@/components/zona-sur/acciones-pedido";
+import { enlaceComprobante } from "@/lib/comprobante";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -28,11 +32,16 @@ function mensajeRecordatorio(opts: {
   return lineas.join("\n");
 }
 
-export default async function ColegioPage() {
+export default async function ColegioPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const q = ((await searchParams).q ?? "").trim();
   const [config, pedidos] = await Promise.all([
     prisma.zonaSurConfig.upsert({ where: { id: "singleton" }, create: { id: "singleton" }, update: {} }),
     prisma.zonaSurPedido.findMany({
-      where: { metodoEntrega: "COLEGIO", estado: { in: ["PENDIENTE", "CONFIRMADO"] } },
+      where: {
+        metodoEntrega: "COLEGIO",
+        estado: { in: ["PENDIENTE", "CONFIRMADO"] },
+        ...(q ? { clienteNombre: { contains: q, mode: "insensitive" as const } } : {}),
+      },
       orderBy: { createdAt: "asc" },
       include: { items: true },
     }),
@@ -66,9 +75,11 @@ export default async function ColegioPage() {
         </Link>
       </div>
 
+      <BuscadorPedidos q={q} />
+
       {dias.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Todavía no hay pedidos para entregar en el colegio.
+          {q ? `No hay pedidos del colegio que coincidan con "${q}".` : "Todavía no hay pedidos para entregar en el colegio."}
         </p>
       ) : (
         dias.map((dia) => {
@@ -114,18 +125,33 @@ export default async function ColegioPage() {
                           {efectivo && pedido.pagaCon != null && (
                             <> · paga con {plata(Number(pedido.pagaCon))}, vuelto {plata(Number(pedido.pagaCon) - Number(pedido.total))}</>
                           )}
-                          {" · "}
-                          {pedido.estado === "CONFIRMADO" ? "Confirmado" : "Pendiente"}
+                          {pedido.comprobanteUrl && (
+                            <>
+                              {" · "}
+                              <a
+                                href={enlaceComprobante(pedido.comprobanteUrl)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline"
+                              >
+                                Ver comprobante
+                              </a>
+                            </>
+                          )}
                         </div>
+                        <NotaPedido pedidoId={pedido.id} nota={pedido.nota} />
                       </div>
-                      <a
-                        href={whatsappUrl(pedido.clienteTelefono, mensaje)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-                      >
-                        Recordar por WhatsApp
-                      </a>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <EstadoPedidoSelect pedidoId={pedido.id} estado={pedido.estado} />
+                        <a
+                          href={whatsappUrl(pedido.clienteTelefono, mensaje)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                        >
+                          Recordar por WhatsApp
+                        </a>
+                      </div>
                     </div>
                   );
                 })}

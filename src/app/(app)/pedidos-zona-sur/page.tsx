@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BuscadorPedidos } from "@/components/zona-sur/buscador-pedidos";
 import { enlaceComprobante } from "@/lib/comprobante";
 import { filasDatosAndreani } from "@/lib/datos-andreani";
 import { DatosEnvioBoton } from "@/components/zona-sur/datos-envio-boton";
@@ -29,8 +30,10 @@ const PAGO_LABEL: Record<string, string> = {
   EFECTIVO: "Efectivo",
 };
 
-export default async function PedidosZonaSurPage() {
+export default async function PedidosZonaSurPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const q = ((await searchParams).q ?? "").trim();
   const pedidos = await prisma.zonaSurPedido.findMany({
+    where: q ? { clienteNombre: { contains: q, mode: "insensitive" } } : undefined,
     orderBy: { createdAt: "desc" },
     take: 200,
     include: { items: true },
@@ -62,8 +65,12 @@ export default async function PedidosZonaSurPage() {
         </div>
       </div>
 
+      <BuscadorPedidos q={q} />
+
       {pedidos.length === 0 ? (
-        <p className="text-muted-foreground">Todavía no hay pedidos.</p>
+        <p className="text-muted-foreground">
+          {q ? `No hay pedidos que coincidan con "${q}".` : "Todavía no hay pedidos."}
+        </p>
       ) : (
         <SeleccionProvider ids={pedidos.map((p) => p.id)}>
           <BarraAccionesPedidos />

@@ -1,18 +1,25 @@
 import Link from "next/link";
+import { BuscadorPedidos } from "@/components/zona-sur/buscador-pedidos";
 import { enlaceComprobante } from "@/lib/comprobante";
 import { prisma } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
 import { AndreaniLinkForm } from "@/components/zona-sur/andreani-link-form";
 import { DatosAndreani } from "@/components/zona-sur/datos-andreani";
 import { filasDatosAndreani } from "@/lib/datos-andreani";
+import { NotaPedido } from "@/components/zona-sur/acciones-pedido";
 import { EstadoPedidoSelect } from "@/components/zona-sur/estado-pedido-select";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function AndreaniPage() {
+export default async function AndreaniPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const q = ((await searchParams).q ?? "").trim();
   const pedidos = await prisma.zonaSurPedido.findMany({
-    where: { metodoEntrega: "ANDREANI", estado: { in: ["PENDIENTE", "CONFIRMADO"] } },
+    where: {
+      metodoEntrega: "ANDREANI",
+      estado: { in: ["PENDIENTE", "CONFIRMADO"] },
+      ...(q ? { clienteNombre: { contains: q, mode: "insensitive" as const } } : {}),
+    },
     orderBy: { createdAt: "asc" },
     include: { items: true },
   });
@@ -33,9 +40,11 @@ export default async function AndreaniPage() {
         </Link>
       </div>
 
+      <BuscadorPedidos q={q} />
+
       {pedidos.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          No hay pedidos de Andreani pendientes.
+          {q ? `No hay pedidos de Andreani que coincidan con "${q}".` : "No hay pedidos de Andreani pendientes."}
         </p>
       ) : (
         <>
@@ -78,6 +87,7 @@ export default async function AndreaniPage() {
                     Pedido anterior: el cliente completa sus datos en el link de Andreani.
                   </p>
                 )}
+                <NotaPedido pedidoId={pedido.id} nota={pedido.nota} />
                 <p className="text-xs text-muted-foreground">Link de Andreani (opcional, solo si lo usás):</p>
                 <AndreaniLinkForm
                   pedidoId={pedido.id}
