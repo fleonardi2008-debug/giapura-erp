@@ -81,7 +81,7 @@ export function CasillaPedido({ id, nombre }: { id: string; nombre: string }) {
 }
 
 const CAMBIOS: { estado: ZonaSurEstado; label: string; variant: "default" | "outline" | "destructive" }[] = [
-  { estado: "CONFIRMADO", label: "Confirmar", variant: "default" },
+  { estado: "PREPARADO", label: "Marcar preparados", variant: "default" },
   { estado: "ENTREGADO", label: "Marcar entregados", variant: "outline" },
   { estado: "PENDIENTE", label: "Volver a pendiente", variant: "outline" },
   { estado: "CANCELADO", label: "Cancelar", variant: "destructive" },

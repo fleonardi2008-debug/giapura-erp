@@ -8,7 +8,7 @@ import { ZonaSurEstado } from "@/generated/prisma/client";
 
 const ESTADO_LABEL: Record<ZonaSurEstado, string> = {
   PENDIENTE: "Pendiente",
-  CONFIRMADO: "Confirmado",
+  PREPARADO: "Preparado",
   ENTREGADO: "Entregado",
   CANCELADO: "Cancelado",
 };

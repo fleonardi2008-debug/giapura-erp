@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BarraAccionesPedidos, CasillaPedido, CasillaTodos, SeleccionProvider } from "@/components/zona-sur/seleccion-pedidos";
 import { BuscadorPedidos } from "@/components/zona-sur/buscador-pedidos";
 import { prisma } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export default async function ColegioPage({ searchParams }: { searchParams: Prom
     prisma.zonaSurPedido.findMany({
       where: {
         metodoEntrega: "COLEGIO",
-        estado: { in: ["PENDIENTE", "CONFIRMADO"] },
+        estado: { in: ["PENDIENTE", "PREPARADO"] },
         ...(q ? { clienteNombre: { contains: q, mode: "insensitive" as const } } : {}),
       },
       orderBy: { createdAt: "asc" },
@@ -77,6 +78,13 @@ export default async function ColegioPage({ searchParams }: { searchParams: Prom
 
       <BuscadorPedidos q={q} />
 
+      <SeleccionProvider ids={pedidos.map((p) => p.id)}>
+        <BarraAccionesPedidos />
+        {pedidos.length > 0 && (
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
+            <CasillaTodos /> Seleccionar todos
+          </label>
+        )}
       {dias.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
           {q ? `No hay pedidos del colegio que coincidan con "${q}".` : "Todavía no hay pedidos para entregar en el colegio."}
@@ -114,6 +122,8 @@ export default async function ColegioPage({ searchParams }: { searchParams: Prom
                       key={pedido.id}
                       className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3"
                     >
+                      <div className="flex min-w-0 items-start gap-3">
+                      <CasillaPedido id={pedido.id} nombre={pedido.clienteNombre} />
                       <div className="min-w-0 space-y-0.5">
                         <div className="font-medium">{pedido.clienteNombre}</div>
                         <div className="text-sm text-muted-foreground">
@@ -141,6 +151,7 @@ export default async function ColegioPage({ searchParams }: { searchParams: Prom
                         </div>
                         <NotaPedido pedidoId={pedido.id} nota={pedido.nota} />
                       </div>
+                      </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <EstadoPedidoSelect pedidoId={pedido.id} estado={pedido.estado} />
                         <a
@@ -160,6 +171,7 @@ export default async function ColegioPage({ searchParams }: { searchParams: Prom
           );
         })
       )}
+      </SeleccionProvider>
     </div>
   );
 }

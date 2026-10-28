@@ -9,8 +9,8 @@ import { ENTREGA_LABEL, INCLUDE_ETIQUETA, destinoPedido } from "@/lib/etiquetas"
 import type { ZonaSurEstado } from "@/generated/prisma/client";
 
 const FILTROS: { valor: ZonaSurEstado | "TODOS"; label: string }[] = [
-  { valor: "CONFIRMADO", label: "Para preparar (confirmados)" },
-  { valor: "PENDIENTE", label: "Pendientes" },
+  { valor: "PENDIENTE", label: "Para preparar (pendientes)" },
+  { valor: "PREPARADO", label: "Preparados" },
   { valor: "ENTREGADO", label: "Entregados" },
   { valor: "TODOS", label: "Todos" },
 ];
@@ -25,10 +25,10 @@ export default async function EtiquetasPage({
   const rol = session.user.role;
   if (rol !== "OWNER" && rol !== "OPERADOR") redirect("/");
 
-  // El operador solo trabaja con los pedidos confirmados; el dueño puede mirar el resto.
+  // El operador solo trabaja con los pedidos para preparar (pendientes); el dueño puede mirar el resto.
   const pedido = (await searchParams).estado;
   const pedidoEstado = Array.isArray(pedido) ? pedido[0] : pedido;
-  const filtro = rol === "OWNER" ? (FILTROS.find((f) => f.valor === pedidoEstado)?.valor ?? "CONFIRMADO") : "CONFIRMADO";
+  const filtro = rol === "OWNER" ? (FILTROS.find((f) => f.valor === pedidoEstado)?.valor ?? "PENDIENTE") : "PENDIENTE";
 
   const pedidos = await prisma.zonaSurPedido.findMany({
     where: filtro === "TODOS" ? {} : { estado: filtro },
@@ -61,7 +61,7 @@ export default async function EtiquetasPage({
           {FILTROS.map((f) => (
             <Link
               key={f.valor}
-              href={f.valor === "CONFIRMADO" ? "/etiquetas" : `/etiquetas?estado=${f.valor}`}
+              href={f.valor === "PENDIENTE" ? "/etiquetas" : `/etiquetas?estado=${f.valor}`}
               className={cn(buttonVariants({ variant: filtro === f.valor ? "default" : "outline", size: "sm" }))}
             >
               {f.label}

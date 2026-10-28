@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BarraAccionesPedidos, CasillaPedido, CasillaTodos, SeleccionProvider } from "@/components/zona-sur/seleccion-pedidos";
 import { BuscadorPedidos } from "@/components/zona-sur/buscador-pedidos";
 import { enlaceComprobante } from "@/lib/comprobante";
 import { prisma } from "@/lib/db";
@@ -17,7 +18,7 @@ export default async function AndreaniPage({ searchParams }: { searchParams: Pro
   const pedidos = await prisma.zonaSurPedido.findMany({
     where: {
       metodoEntrega: "ANDREANI",
-      estado: { in: ["PENDIENTE", "CONFIRMADO"] },
+      estado: { in: ["PENDIENTE", "PREPARADO"] },
       ...(q ? { clienteNombre: { contains: q, mode: "insensitive" as const } } : {}),
     },
     orderBy: { createdAt: "asc" },
@@ -42,6 +43,13 @@ export default async function AndreaniPage({ searchParams }: { searchParams: Pro
 
       <BuscadorPedidos q={q} />
 
+      <SeleccionProvider ids={pedidos.map((p) => p.id)}>
+        <BarraAccionesPedidos />
+        {pedidos.length > 0 && (
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
+            <CasillaTodos /> Seleccionar todos
+          </label>
+        )}
       {pedidos.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
           {q ? `No hay pedidos de Andreani que coincidan con "${q}".` : "No hay pedidos de Andreani pendientes."}
@@ -55,6 +63,8 @@ export default async function AndreaniPage({ searchParams }: { searchParams: Pro
             {pedidos.map((pedido) => (
               <div key={pedido.id} className="space-y-3 rounded-xl border border-border p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                  <CasillaPedido id={pedido.id} nombre={pedido.clienteNombre} />
                   <div className="min-w-0 space-y-0.5">
                     <div className="font-medium">{pedido.clienteNombre}</div>
                     <div className="text-sm text-muted-foreground">
@@ -75,6 +85,7 @@ export default async function AndreaniPage({ searchParams }: { searchParams: Pro
                         </>
                       )}
                     </div>
+                  </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <EstadoPedidoSelect pedidoId={pedido.id} estado={pedido.estado} />
@@ -100,6 +111,7 @@ export default async function AndreaniPage({ searchParams }: { searchParams: Pro
           </div>
         </>
       )}
+      </SeleccionProvider>
     </div>
   );
 }

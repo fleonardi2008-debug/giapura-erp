@@ -579,7 +579,7 @@ enum ZonaSurMetodoPago {
 
 enum ZonaSurEstado {
   PENDIENTE
-  CONFIRMADO
+  PREPARADO
   ENTREGADO
   CANCELADO
 }

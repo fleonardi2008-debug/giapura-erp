@@ -40,8 +40,8 @@ export default async function ImprimirEtiquetasPage({
     ids.length === 0
       ? []
       : await prisma.zonaSurPedido.findMany({
-          // El operador solo puede imprimir pedidos confirmados, aunque pida otro id a mano.
-          where: { id: { in: ids }, ...(rol === "OPERADOR" ? { estado: "CONFIRMADO" } : {}) },
+          // El operador solo puede imprimir pedidos por preparar o ya preparados, aunque pida otro id a mano.
+          where: { id: { in: ids }, ...(rol === "OPERADOR" ? { estado: { in: ["PENDIENTE", "PREPARADO"] } } : {}) },
           orderBy: { createdAt: "asc" },
           include: INCLUDE_ETIQUETA,
         });
