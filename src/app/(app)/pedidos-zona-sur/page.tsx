@@ -41,7 +41,7 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Pedidos Zona Sur</h1>
           <p className="text-muted-foreground">
@@ -74,7 +74,7 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
       ) : (
         <SeleccionProvider ids={pedidos.map((p) => p.id)}>
           <BarraAccionesPedidos />
-          <Table>
+          <Table className="tabla-tarjetas">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
@@ -96,16 +96,16 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
                   <TableCell>
                     <CasillaPedido id={pedido.id} nombre={pedido.clienteNombre} />
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                  <TableCell data-label="Fecha" className="whitespace-nowrap text-sm text-muted-foreground">
                     {pedido.createdAt.toLocaleDateString("es-AR")}
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Cliente">
                     <div className="font-medium">{pedido.clienteNombre}</div>
                     <div className="text-xs text-muted-foreground">{pedido.clienteEmail}</div>
                     <div className="text-xs text-muted-foreground">{pedido.clienteTelefono}</div>
                     {pedido.clienteDni && <div className="text-xs text-muted-foreground">DNI {pedido.clienteDni}</div>}
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell data-label="Productos" className="text-sm">
                     {pedido.items.map((item) => (
                       <div key={item.id}>
                         {item.cantidad} × {item.nombre}
@@ -113,7 +113,7 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
                     ))}
                     <NotaPedido pedidoId={pedido.id} nota={pedido.nota} />
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell data-label="Entrega" className="text-sm">
                     <div>{ENTREGA_LABEL[pedido.metodoEntrega] ?? pedido.metodoEntrega}</div>
                     {pedido.metodoEntrega === "ANDREANI" && pedido.andreaniModalidad ? (
                       <div className="space-y-0.5 text-xs text-muted-foreground">
@@ -132,7 +132,7 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
                     {pedido.puntoElegido && <div className="text-xs text-muted-foreground">{pedido.puntoElegido}</div>}
                     {pedido.metodoEntrega !== "RETIRO_CASA" && <PasarARetiroCasa pedidoId={pedido.id} />}
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell data-label="Pago" className="text-sm">
                     <div>{PAGO_LABEL[pedido.metodoPago] ?? pedido.metodoPago}</div>
                     {pedido.comprobanteUrl && (
                       <a href={enlaceComprobante(pedido.comprobanteUrl)} target="_blank" rel="noopener noreferrer" className="text-xs underline">
@@ -151,13 +151,13 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap font-medium">
+                  <TableCell data-label="Total" className="whitespace-nowrap font-medium">
                     ${Number(pedido.total).toLocaleString("es-AR")}
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Estado">
                     <EstadoPedidoSelect pedidoId={pedido.id} estado={pedido.estado} />
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell data-label="Etiqueta" className="text-sm">
                     <a
                       href={`/imprimir-etiquetas?ids=${pedido.id}`}
                       target="_blank"
