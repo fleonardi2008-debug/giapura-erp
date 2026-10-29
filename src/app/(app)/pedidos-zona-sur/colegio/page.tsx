@@ -25,11 +25,11 @@ function mensajeRecordatorio(opts: {
 }) {
   const primerNombre = opts.nombre.trim().split(/\s+/)[0] || "";
   const lineas = [
-    `Hola ${primerNombre}! Te recuerdo que mañana (${opts.dia}) te llevo tu pedido de Giapura al colegio.`,
+    `Hola ${primerNombre}, ¿cómo estás? Te recuerdo que mañana (${opts.dia}) te llevo tu pedido de Giapura al colegio.`,
   ];
-  if (opts.lugar) lineas.push(`Te espero en: ${opts.lugar}.`);
+  if (opts.lugar) lineas.push(`Te espero ${opts.lugar}.`);
   if (opts.efectivo) lineas.push(`Acordate que se paga en efectivo: ${plata(opts.total)}.`);
-  lineas.push("Cualquier cosa avisame. — Fran");
+  lineas.push("Cualquier cosa avisame 🫶");
   return lineas.join("\n");
 }
 
