@@ -29,7 +29,7 @@ function mensajeRecordatorio(opts: {
   ];
   if (opts.lugar) lineas.push(`Te espero ${opts.lugar}.`);
   if (opts.efectivo) lineas.push(`Acordate que se paga en efectivo: ${plata(opts.total)}.`);
-  lineas.push("Cualquier cosa avisame 🫶");
+  lineas.push("Cualquier cosa avisamee 🫶");
   return lineas.join("\n");
 }
 
