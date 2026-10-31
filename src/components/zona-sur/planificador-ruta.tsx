@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { guardarPuntosRuta, guardarUbicacionPedido } from "@/lib/actions/zona-sur";
 import { localidadDe, ubicarDireccion, type Punto } from "@/lib/zona-sur-geo";
+import { recordatorioDomicilioUrl } from "@/lib/zona-sur-recordatorio";
 import { calcularRuta, enlacesGoogleMaps, type ResultadoRuta } from "@/lib/zona-sur-ruta";
 
-type PedidoRuta = { id: string; nombre: string; direccion: string; lat: number | null; lng: number | null; estado: string };
+type PedidoRuta = { id: string; nombre: string; telefono: string; efectivo: boolean; total: number; direccion: string; lat: number | null; lng: number | null; estado: string };
 
 const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const min = (n: number) => `${Math.max(1, Math.round(n))} min`;
@@ -245,6 +246,14 @@ export function PlanificadorRuta({
                     <span className="block text-xs text-muted-foreground">
                       {min(t.minutos)} desde la parada anterior · {t.km.toFixed(1)} km
                     </span>
+                    <a
+                      href={recordatorioDomicilioUrl(p)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-block text-xs underline"
+                    >
+                      Recordar por WhatsApp{p.efectivo ? ` (cobrar $${p.total.toLocaleString("es-AR")})` : ""}
+                    </a>
                   </span>
                 </li>
               );

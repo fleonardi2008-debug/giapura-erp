@@ -3,6 +3,7 @@ import { BuscadorPedidos, leerEstadoFiltro } from "@/components/zona-sur/buscado
 import { enlaceComprobante } from "@/lib/comprobante";
 import { filasDatosAndreani } from "@/lib/datos-andreani";
 import { DatosEnvioBoton } from "@/components/zona-sur/datos-envio-boton";
+import { recordatorioDomicilioUrl } from "@/lib/zona-sur-recordatorio";
 import { NotaPedido, PasarAEnvioDomicilio, PasarARetiroCasa } from "@/components/zona-sur/acciones-pedido";
 import { prisma } from "@/lib/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -139,6 +140,21 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
                     )}
                     {pedido.puntoElegido && <div className="text-xs text-muted-foreground">{pedido.puntoElegido}</div>}
                     {pedido.metodoEntrega === "ANDREANI" && pedido.andreaniModalidad === "DOMICILIO" && <PasarAEnvioDomicilio pedidoId={pedido.id} />}
+                    {pedido.metodoEntrega === "ENVIO_ZONA" && (
+                      <a
+                        href={recordatorioDomicilioUrl({
+                          nombre: pedido.clienteNombre,
+                          telefono: pedido.clienteTelefono,
+                          efectivo: pedido.metodoPago === "EFECTIVO",
+                          total: Number(pedido.total),
+                        })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-1")}
+                      >
+                        Recordar por WhatsApp
+                      </a>
+                    )}
                     {pedido.metodoEntrega !== "RETIRO_CASA" && <PasarARetiroCasa pedidoId={pedido.id} />}
                   </TableCell>
                   <TableCell data-label="Pago" className="text-sm">

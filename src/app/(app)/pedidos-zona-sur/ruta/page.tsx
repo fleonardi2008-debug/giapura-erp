@@ -12,7 +12,7 @@ export default async function RutaPage() {
     prisma.zonaSurPedido.findMany({
       where: { metodoEntrega: "ENVIO_ZONA", estado: { in: ["PENDIENTE", "PREPARADO"] } },
       orderBy: { createdAt: "asc" },
-      select: { id: true, clienteNombre: true, direccion: true, envioLat: true, envioLng: true, estado: true },
+      select: { id: true, clienteNombre: true, clienteTelefono: true, metodoPago: true, total: true, direccion: true, envioLat: true, envioLng: true, estado: true },
     }),
   ]);
 
@@ -37,6 +37,9 @@ export default async function RutaPage() {
         pedidos={pedidos.map((p) => ({
           id: p.id,
           nombre: p.clienteNombre,
+          telefono: p.clienteTelefono,
+          efectivo: p.metodoPago === "EFECTIVO",
+          total: Number(p.total),
           direccion: p.direccion ?? "",
           lat: p.envioLat,
           lng: p.envioLng,
