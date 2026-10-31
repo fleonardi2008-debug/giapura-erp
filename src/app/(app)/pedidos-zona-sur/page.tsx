@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BuscadorPedidos } from "@/components/zona-sur/buscador-pedidos";
+import { BuscadorPedidos, leerEstadoFiltro } from "@/components/zona-sur/buscador-pedidos";
 import { enlaceComprobante } from "@/lib/comprobante";
 import { filasDatosAndreani } from "@/lib/datos-andreani";
 import { DatosEnvioBoton } from "@/components/zona-sur/datos-envio-boton";
@@ -30,10 +30,15 @@ const PAGO_LABEL: Record<string, string> = {
   EFECTIVO: "Efectivo",
 };
 
-export default async function PedidosZonaSurPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const q = ((await searchParams).q ?? "").trim();
+export default async function PedidosZonaSurPage({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
+  const params = await searchParams;
+  const q = (params.q ?? "").trim();
+  const estado = leerEstadoFiltro(params.estado);
   const pedidos = await prisma.zonaSurPedido.findMany({
-    where: q ? { clienteNombre: { contains: q, mode: "insensitive" } } : undefined,
+    where: {
+      ...(q ? { clienteNombre: { contains: q, mode: "insensitive" as const } } : {}),
+      ...(estado ? { estado } : {}),
+    },
     orderBy: { createdAt: "desc" },
     take: 200,
     include: { items: true },
@@ -65,7 +70,7 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
         </div>
       </div>
 
-      <BuscadorPedidos q={q} />
+      <BuscadorPedidos q={q} estado={estado} />
 
       {pedidos.length === 0 ? (
         <p className="text-muted-foreground">

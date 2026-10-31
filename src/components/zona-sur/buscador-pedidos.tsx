@@ -3,7 +3,22 @@
  * se vuelve a armar con ?q=... y el filtro lo hace el servidor, así los botones de "seleccionar todos"
  * solo afectan a los pedidos que se ven.
  */
-export function BuscadorPedidos({ q }: { q: string }) {
+export const ESTADOS_FILTRO = ["PENDIENTE", "PREPARADO", "ENTREGADO", "CANCELADO"] as const;
+export type EstadoFiltro = (typeof ESTADOS_FILTRO)[number];
+
+/** Estado pedido en ?estado=...; si no es uno válido, null (= sin filtrar). */
+export function leerEstadoFiltro(valor: string | undefined): EstadoFiltro | null {
+  return ESTADOS_FILTRO.find((e) => e === valor) ?? null;
+}
+
+const ETIQUETA_ESTADO: Record<EstadoFiltro, string> = {
+  PENDIENTE: "Pendiente",
+  PREPARADO: "Preparado",
+  ENTREGADO: "Entregado",
+  CANCELADO: "Cancelado",
+};
+
+export function BuscadorPedidos({ q, estado, todosLabel = "Todos los estados" }: { q: string; estado: EstadoFiltro | null; todosLabel?: string }) {
   return (
     <form method="get" role="search" className="flex flex-wrap items-center gap-2">
       <div className="relative">
@@ -29,13 +44,26 @@ export function BuscadorPedidos({ q }: { q: string }) {
           className="h-9 w-64 max-w-full rounded-lg border border-input bg-transparent pr-3 pl-9 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         />
       </div>
+      <select
+        name="estado"
+        defaultValue={estado ?? ""}
+        aria-label="Filtrar por estado"
+        className="h-9 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <option value="">{todosLabel}</option>
+        {ESTADOS_FILTRO.map((e) => (
+          <option key={e} value={e}>
+            {ETIQUETA_ESTADO[e]}
+          </option>
+        ))}
+      </select>
       <button
         type="submit"
         className="h-9 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted"
       >
         Buscar
       </button>
-      {q && (
+      {(q || estado) && (
         <a href="?" className="text-sm underline">
           Limpiar
         </a>

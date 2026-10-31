@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BarraAccionesPedidos, CasillaPedido, CasillaTodos, SeleccionProvider } from "@/components/zona-sur/seleccion-pedidos";
-import { BuscadorPedidos } from "@/components/zona-sur/buscador-pedidos";
+import { BuscadorPedidos, leerEstadoFiltro } from "@/components/zona-sur/buscador-pedidos";
 import { prisma } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
 import { parsearDiasColegio, whatsappUrl } from "@/lib/zona-sur-colegio";
@@ -33,14 +33,16 @@ function mensajeRecordatorio(opts: {
   return lineas.join("\n");
 }
 
-export default async function ColegioPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const q = ((await searchParams).q ?? "").trim();
+export default async function ColegioPage({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
+  const params = await searchParams;
+  const q = (params.q ?? "").trim();
+  const estado = leerEstadoFiltro(params.estado);
   const [config, pedidos] = await Promise.all([
     prisma.zonaSurConfig.upsert({ where: { id: "singleton" }, create: { id: "singleton" }, update: {} }),
     prisma.zonaSurPedido.findMany({
       where: {
         metodoEntrega: "COLEGIO",
-        estado: { in: ["PENDIENTE", "PREPARADO"] },
+        estado: estado ?? { in: ["PENDIENTE", "PREPARADO"] },
         ...(q ? { clienteNombre: { contains: q, mode: "insensitive" as const } } : {}),
       },
       orderBy: { createdAt: "asc" },
@@ -76,7 +78,7 @@ export default async function ColegioPage({ searchParams }: { searchParams: Prom
         </Link>
       </div>
 
-      <BuscadorPedidos q={q} />
+      <BuscadorPedidos q={q} estado={estado} todosLabel="Pendientes y preparados" />
 
       <SeleccionProvider ids={pedidos.map((p) => p.id)}>
         <BarraAccionesPedidos />

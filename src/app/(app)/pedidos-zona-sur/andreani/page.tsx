@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BarraAccionesPedidos, CasillaPedido, CasillaTodos, SeleccionProvider } from "@/components/zona-sur/seleccion-pedidos";
-import { BuscadorPedidos } from "@/components/zona-sur/buscador-pedidos";
+import { BuscadorPedidos, leerEstadoFiltro } from "@/components/zona-sur/buscador-pedidos";
 import { enlaceComprobante } from "@/lib/comprobante";
 import { prisma } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
@@ -13,12 +13,14 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function AndreaniPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const q = ((await searchParams).q ?? "").trim();
+export default async function AndreaniPage({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
+  const params = await searchParams;
+  const q = (params.q ?? "").trim();
+  const estado = leerEstadoFiltro(params.estado);
   const pedidos = await prisma.zonaSurPedido.findMany({
     where: {
       metodoEntrega: "ANDREANI",
-      estado: { in: ["PENDIENTE", "PREPARADO"] },
+      estado: estado ?? { in: ["PENDIENTE", "PREPARADO"] },
       ...(q ? { clienteNombre: { contains: q, mode: "insensitive" as const } } : {}),
     },
     orderBy: { createdAt: "asc" },
@@ -41,7 +43,7 @@ export default async function AndreaniPage({ searchParams }: { searchParams: Pro
         </Link>
       </div>
 
-      <BuscadorPedidos q={q} />
+      <BuscadorPedidos q={q} estado={estado} todosLabel="Pendientes y preparados" />
 
       <SeleccionProvider ids={pedidos.map((p) => p.id)}>
         <BarraAccionesPedidos />
