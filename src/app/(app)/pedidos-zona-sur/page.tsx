@@ -58,6 +58,9 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/pedidos-zona-sur/ruta" className={cn(buttonVariants({ variant: "secondary" }))}>
+            Ruta de reparto
+          </Link>
           <Link href="/pedidos-zona-sur/colegio" className={cn(buttonVariants({ variant: "secondary" }))}>
             Entregas en el colegio
           </Link>

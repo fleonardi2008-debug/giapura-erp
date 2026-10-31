@@ -592,6 +592,8 @@ model ZonaSurConfig {
   zonaNombre        String   @default("Zona Sur")
   zonaCentroLat     Float    @default(-34.7206)
   zonaCentroLng     Float    @default(-58.2681)
+  rutaInicio        String   @default("Intendente Pedro Oliveri 535, Quilmes") // desde dónde sale el reparto a domicilio
+  rutaFin           String   @default("Zeballos 575, Bernal, Quilmes") // dónde termina el reparto
   zonaRadioKm       Float    @default(5)
   zonaPrecio        Decimal  @default(0) @db.Decimal(14, 2)
   cbuAlias          String?
@@ -615,6 +617,8 @@ model ZonaSurPedido {
   clienteTelefono String
   metodoEntrega  ZonaSurMetodoEntrega
   direccion      String? // solo si metodoEntrega = ENVIO_ZONA
+  envioLat       Float? // ubicación verificada del domicilio (para armar la ruta de reparto)
+  envioLng       Float?
   andreaniLink   String? // solo si metodoEntrega = ANDREANI: link de un solo uso donde el cliente completa sus datos y paga el envío (ya opcional)
   // Datos para cargar el envío en RedChat (solo ANDREANI). Mismos campos que pide su formulario.
   costoEnvio        Decimal @default(0) @db.Decimal(14, 2) // envío por Andreani cobrado al cliente, ya sumado al total

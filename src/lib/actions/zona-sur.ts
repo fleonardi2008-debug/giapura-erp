@@ -460,6 +460,9 @@ export async function crearZonaSurPedido(formData: FormData) {
       clienteTelefono: data.clienteTelefono,
       metodoEntrega: data.metodoEntrega,
       direccion: data.metodoEntrega === "ENVIO_ZONA" ? data.direccion : (datosAndreani?.direccion ?? null),
+      ...(data.metodoEntrega === "ENVIO_ZONA" && data.lat != null && data.lng != null
+        ? { envioLat: data.lat, envioLng: data.lng }
+        : {}),
       ...(datosAndreani
         ? {
             clienteDni: datosAndreani.clienteDni,
@@ -531,5 +534,27 @@ export async function pasarPedidoARetiroCasa(pedidoId: string) {
   revalidatePath("/pedidos-zona-sur");
   revalidatePath("/pedidos-zona-sur/andreani");
   revalidatePath("/pedidos-zona-sur/colegio");
+  return { success: true };
+}
+
+/** Guarda la ubicación de un pedido a domicilio (la calcula el navegador al armar la ruta). */
+export async function guardarUbicacionPedido(pedidoId: string, lat: number, lng: number) {
+  await requireOwner();
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { error: "Ubicación inválida" };
+  await prisma.zonaSurPedido.update({ where: { id: pedidoId }, data: { envioLat: lat, envioLng: lng } });
+  return { success: true };
+}
+
+/** Guarda desde dónde sale y dónde termina el reparto. */
+export async function guardarPuntosRuta(inicio: string, fin: string) {
+  await requireOwner();
+  const i = inicio.trim();
+  const f = fin.trim();
+  if (!i || !f) return { error: "Completá la salida y la llegada" };
+  await prisma.zonaSurConfig.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", rutaInicio: i, rutaFin: f },
+    update: { rutaInicio: i, rutaFin: f },
+  });
   return { success: true };
 }
