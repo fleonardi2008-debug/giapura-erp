@@ -559,3 +559,49 @@ export async function guardarPuntosRuta(inicio: string, retiro: string, fin: str
   });
   return { success: true };
 }
+
+/**
+ * Pasa un pedido de Andreani (a domicilio) a "Envío a domicilio" de la zona, por ejemplo cuando se agrandó la zona
+ * y el domicilio ya queda adentro. Se descuenta el costo de Andreani del total (y se suma el precio de envío de la zona,
+ * que es 0 si es gratis). La ubicación se calcula después, al armar la ruta de reparto.
+ */
+export async function pasarPedidoAEnvioDomicilio(pedidoId: string) {
+  await requireOwner();
+  const [pedido, config] = await Promise.all([
+    prisma.zonaSurPedido.findUnique({ where: { id: pedidoId } }),
+    prisma.zonaSurConfig.upsert({ where: { id: "singleton" }, create: { id: "singleton" }, update: {} }),
+  ]);
+  if (!pedido) return { error: "No encontré el pedido" };
+  if (pedido.metodoEntrega !== "ANDREANI") return { error: "Este pedido no es de Andreani" };
+  if (pedido.andreaniModalidad !== "DOMICILIO" || !pedido.envioCalle) {
+    return { error: "Este pedido no tiene un domicilio completo cargado (era a sucursal o es un pedido viejo)" };
+  }
+
+  const direccion = [
+    [pedido.envioCalle, pedido.envioNumero].filter(Boolean).join(" "),
+    pedido.envioPiso,
+    pedido.envioCiudad,
+    pedido.envioProvincia,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const total = Number(pedido.total) - Number(pedido.costoEnvio) + Number(config.zonaPrecio);
+
+  await prisma.zonaSurPedido.update({
+    where: { id: pedidoId },
+    data: {
+      metodoEntrega: "ENVIO_ZONA",
+      direccion,
+      envioLat: null,
+      envioLng: null,
+      puntoElegido: null,
+      costoEnvio: 0,
+      envioAConfirmar: false,
+      total: Math.max(0, total),
+    },
+  });
+  revalidatePath("/pedidos-zona-sur");
+  revalidatePath("/pedidos-zona-sur/andreani");
+  revalidatePath("/pedidos-zona-sur/ruta");
+  return { success: true };
+}

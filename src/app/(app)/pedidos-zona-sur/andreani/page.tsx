@@ -7,7 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { AndreaniLinkForm } from "@/components/zona-sur/andreani-link-form";
 import { DatosAndreani } from "@/components/zona-sur/datos-andreani";
 import { filasDatosAndreani } from "@/lib/datos-andreani";
-import { NotaPedido } from "@/components/zona-sur/acciones-pedido";
+import { NotaPedido, PasarAEnvioDomicilio } from "@/components/zona-sur/acciones-pedido";
 import { EstadoPedidoSelect } from "@/components/zona-sur/estado-pedido-select";
 import { cn } from "@/lib/utils";
 
@@ -101,6 +101,7 @@ export default async function AndreaniPage({ searchParams }: { searchParams: Pro
                   </p>
                 )}
                 <NotaPedido pedidoId={pedido.id} nota={pedido.nota} />
+                {pedido.andreaniModalidad === "DOMICILIO" && <PasarAEnvioDomicilio pedidoId={pedido.id} />}
                 <p className="text-xs text-muted-foreground">Link de Andreani (opcional, solo si lo usás):</p>
                 <AndreaniLinkForm
                   pedidoId={pedido.id}
