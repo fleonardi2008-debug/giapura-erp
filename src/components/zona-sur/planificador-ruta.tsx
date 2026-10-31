@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { guardarPuntosRuta, guardarUbicacionPedido } from "@/lib/actions/zona-sur";
 import { ubicarDireccion, type Punto } from "@/lib/zona-sur-geo";
-import { calcularRuta, enlacesGoogleMaps, tramoFinal, type ResultadoRuta } from "@/lib/zona-sur-ruta";
+import { calcularRuta, enlacesGoogleMaps, type ResultadoRuta } from "@/lib/zona-sur-ruta";
 
 type PedidoRuta = { id: string; nombre: string; direccion: string; lat: number | null; lng: number | null; estado: string };
 
@@ -16,15 +16,18 @@ const horas = (n: number) => (n >= 60 ? `${Math.floor(n / 60)} h ${Math.round(n 
 export function PlanificadorRuta({
   centro,
   inicioInicial,
+  retiroInicial,
   finInicial,
   pedidos,
 }: {
   centro: Punto;
   inicioInicial: string;
+  retiroInicial: string;
   finInicial: string;
   pedidos: PedidoRuta[];
 }) {
   const [inicio, setInicio] = useState(inicioInicial);
+  const [retiro, setRetiro] = useState(retiroInicial);
   const [fin, setFin] = useState(finInicial);
   const [elegidos, setElegidos] = useState<Set<string>>(new Set(pedidos.map((p) => p.id)));
   const [calculando, setCalculando] = useState(false);
@@ -32,6 +35,7 @@ export function PlanificadorRuta({
   const [resultado, setResultado] = useState<{
     ruta: ResultadoRuta;
     inicio: string;
+    retiro: string;
     fin: string;
     sinUbicar: PedidoRuta[];
   } | null>(null);
@@ -49,19 +53,21 @@ export function PlanificadorRuta({
     setCalculando(true);
     setResultado(null);
     try {
-      setProgreso("Ubicando salida y llegada…");
+      setProgreso("Ubicando salida y retiro…");
       const pInicio = await ubicarDireccion(inicio, centro);
       await pausa(1100);
-      const pFin = await ubicarDireccion(fin, centro);
-      if (pInicio.estado !== "ok" || pFin.estado !== "ok") {
-        toast.error(
-          pInicio.estado !== "ok"
-            ? "No pude ubicar la salida. Probá con calle, número y localidad."
-            : "No pude ubicar la llegada. Probá con calle, número y localidad."
-        );
+      const pRetiro = await ubicarDireccion(retiro, centro);
+      let pFin: Awaited<ReturnType<typeof ubicarDireccion>> | null = null;
+      if (fin.trim()) {
+        await pausa(1100);
+        pFin = await ubicarDireccion(fin, centro);
+      }
+      if (pInicio.estado !== "ok" || pRetiro.estado !== "ok" || (pFin && pFin.estado !== "ok")) {
+        const cual = pInicio.estado !== "ok" ? "la salida" : pRetiro.estado !== "ok" ? "el lugar de retiro" : "la llegada";
+        toast.error(`No pude ubicar ${cual}. Probá con calle, número y localidad.`);
         return;
       }
-      await guardarPuntosRuta(inicio, fin);
+      await guardarPuntosRuta(inicio, retiro, fin);
 
       const paradas: { id: string; punto: Punto }[] = [];
       const sinUbicar: PedidoRuta[] = [];
@@ -89,12 +95,12 @@ export function PlanificadorRuta({
       }
 
       setProgreso("Calculando el mejor orden…");
-      const ruta = await calcularRuta(pInicio.punto, paradas, pFin.punto);
+      const ruta = await calcularRuta(pInicio.punto, pRetiro.punto, paradas, pFin ? pFin.punto : null);
       if (!ruta) {
         toast.error("No pude calcular la ruta ahora. Probá de nuevo en un momento.");
         return;
       }
-      setResultado({ ruta, inicio, fin, sinUbicar });
+      setResultado({ ruta, inicio, retiro, fin: fin.trim(), sinUbicar });
     } catch {
       toast.error("Algo salió mal al calcular la ruta. Probá de nuevo.");
     } finally {
@@ -104,18 +110,19 @@ export function PlanificadorRuta({
   }
 
   const porId = new Map(pedidos.map((p) => [p.id, p]));
-  const final = resultado ? tramoFinal(resultado.ruta) : null;
   const enlaces = resultado
-    ? enlacesGoogleMaps(
-        resultado.inicio,
-        resultado.ruta.orden.map((t) => porId.get(t.paradaId)!.direccion),
-        resultado.fin
-      )
+    ? (() => {
+        const dirs = resultado.ruta.orden.map((t) => porId.get(t.paradaId)!.direccion);
+        // sin llegada cargada, el recorrido termina en la última entrega
+        const destino = resultado.fin || dirs[dirs.length - 1];
+        const medio = resultado.fin ? dirs : dirs.slice(0, -1);
+        return enlacesGoogleMaps(resultado.inicio, [resultado.retiro, ...medio], destino);
+      })()
     : [];
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <label className="space-y-1 text-sm">
           <span className="font-medium">Salgo desde</span>
           <input
@@ -125,10 +132,19 @@ export function PlanificadorRuta({
           />
         </label>
         <label className="space-y-1 text-sm">
-          <span className="font-medium">Termino en</span>
+          <span className="font-medium">Primera parada: busco las cajas en</span>
+          <input
+            value={retiro}
+            onChange={(e) => setRetiro(e.target.value)}
+            className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium">Termino en (opcional)</span>
           <input
             value={fin}
             onChange={(e) => setFin(e.target.value)}
+            placeholder="Vacío = en la última entrega"
             className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         </label>
@@ -182,7 +198,7 @@ export function PlanificadorRuta({
         {progreso && <span className="text-sm text-muted-foreground">{progreso}</span>}
       </div>
 
-      {resultado && final && (
+      {resultado && (
         <section className="space-y-4 rounded-xl border p-4">
           <div>
             <h2 className="text-lg font-semibold">Orden recomendado</h2>
@@ -193,6 +209,16 @@ export function PlanificadorRuta({
           </div>
           <ol className="space-y-2">
             <li className="text-sm text-muted-foreground">Salida: {resultado.inicio}</li>
+            <li className="flex gap-3 rounded-lg border border-dashed p-3 text-sm">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full border text-xs font-semibold">0</span>
+              <span className="min-w-0">
+                <span className="block font-medium">Buscar las cajas</span>
+                <span className="block text-muted-foreground">{resultado.retiro}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {min(resultado.ruta.aRetiro.minutos)} desde la salida · {resultado.ruta.aRetiro.km.toFixed(1)} km
+                </span>
+              </span>
+            </li>
             {resultado.ruta.orden.map((t, i) => {
               const p = porId.get(t.paradaId)!;
               return (
@@ -210,9 +236,11 @@ export function PlanificadorRuta({
                 </li>
               );
             })}
-            <li className="text-sm text-muted-foreground">
-              Llegada: {resultado.fin} ({min(final.minutos)} · {final.km.toFixed(1)} km)
-            </li>
+            {resultado.fin && resultado.ruta.final && (
+              <li className="text-sm text-muted-foreground">
+                Llegada: {resultado.fin} ({min(resultado.ruta.final.minutos)} · {resultado.ruta.final.km.toFixed(1)} km)
+              </li>
+            )}
           </ol>
 
           <div className="flex flex-wrap gap-2">

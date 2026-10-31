@@ -593,7 +593,8 @@ model ZonaSurConfig {
   zonaCentroLat     Float    @default(-34.7206)
   zonaCentroLng     Float    @default(-58.2681)
   rutaInicio        String   @default("Intendente Pedro Oliveri 535, Quilmes") // desde dónde sale el reparto a domicilio
-  rutaFin           String   @default("Zeballos 575, Bernal, Quilmes") // dónde termina el reparto
+  rutaRetiro        String   @default("Zeballos 575, Bernal, Quilmes") // primera parada: donde se buscan las cajas con los pedidos
+  rutaFin           String   @default("Zeballos 575, Bernal, Quilmes") // dónde termina el reparto; vacío = en la última entrega
   zonaRadioKm       Float    @default(5)
   zonaPrecio        Decimal  @default(0) @db.Decimal(14, 2)
   cbuAlias          String?

@@ -545,16 +545,17 @@ export async function guardarUbicacionPedido(pedidoId: string, lat: number, lng:
   return { success: true };
 }
 
-/** Guarda desde dónde sale y dónde termina el reparto. */
-export async function guardarPuntosRuta(inicio: string, fin: string) {
+/** Guarda la salida, el lugar donde se buscan las cajas (primera parada) y, si hay, dónde termina el reparto. */
+export async function guardarPuntosRuta(inicio: string, retiro: string, fin: string) {
   await requireOwner();
   const i = inicio.trim();
+  const r = retiro.trim();
   const f = fin.trim();
-  if (!i || !f) return { error: "Completá la salida y la llegada" };
+  if (!i || !r) return { error: "Completá la salida y el lugar de retiro" };
   await prisma.zonaSurConfig.upsert({
     where: { id: "singleton" },
-    create: { id: "singleton", rutaInicio: i, rutaFin: f },
-    update: { rutaInicio: i, rutaFin: f },
+    create: { id: "singleton", rutaInicio: i, rutaRetiro: r, rutaFin: f },
+    update: { rutaInicio: i, rutaRetiro: r, rutaFin: f },
   });
   return { success: true };
 }

@@ -2,18 +2,41 @@ import type { Punto } from "@/lib/zona-sur-geo";
 
 export type ParadaRuta = { id: string; punto: Punto };
 export type TramoRuta = { paradaId: string; minutos: number; km: number };
-export type ResultadoRuta = { orden: TramoRuta[]; minutosTotal: number; kmTotal: number };
+export type Tramo = { minutos: number; km: number };
+export type ResultadoRuta = {
+  aRetiro: Tramo; // de la salida al lugar donde se buscan las cajas
+  orden: TramoRuta[]; // entregas en el orden recomendado
+  final: Tramo | null; // hasta el punto de llegada, si se cargó uno
+  minutosTotal: number;
+  kmTotal: number;
+};
+
+const OSRM = "https://router.project-osrm.org";
+const coord = (p: Punto) => `${p.lng},${p.lat}`;
 
 /**
- * Pide a OSRM (rutas por calles, gratis) el mejor orden para pasar por todas las paradas, saliendo del
- * primer punto y terminando en el último. Se llama desde el navegador.
- * Devuelve las paradas en orden con el tiempo de manejo de cada tramo (el último tramo, el de la llegada, no está en la lista).
+ * Pide a OSRM (rutas por calles, gratis) el recorrido: salida -> retiro de cajas (primera parada, fija) ->
+ * entregas en el mejor orden por tiempo de manejo -> llegada (opcional; si no hay, termina en la última entrega).
+ * Se llama desde el navegador. Devuelve null si el servicio no responde.
  */
-export async function calcularRuta(inicio: Punto, paradas: ParadaRuta[], fin: Punto): Promise<ResultadoRuta | null> {
-  const puntos = [inicio, ...paradas.map((p) => p.punto), fin];
-  const coords = puntos.map((p) => `${p.lng},${p.lat}`).join(";");
-  const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=last&roundtrip=false&overview=false`;
+export async function calcularRuta(
+  inicio: Punto,
+  retiro: Punto,
+  paradas: ParadaRuta[],
+  fin: Punto | null
+): Promise<ResultadoRuta | null> {
   try {
+    const rutaRetiro = await fetch(`${OSRM}/route/v1/driving/${coord(inicio)};${coord(retiro)}?overview=false`);
+    if (!rutaRetiro.ok) return null;
+    const dr = (await rutaRetiro.json()) as { code: string; routes: { duration: number; distance: number }[] };
+    if (dr.code !== "Ok" || !dr.routes?.[0]) return null;
+    const aRetiro = { minutos: dr.routes[0].duration / 60, km: dr.routes[0].distance / 1000 };
+
+    // El recorrido óptimo empieza en el retiro (source=first); si hay llegada, termina ahí (destination=last).
+    const puntos = [retiro, ...paradas.map((p) => p.punto), ...(fin ? [fin] : [])];
+    const url =
+      `${OSRM}/trip/v1/driving/${puntos.map(coord).join(";")}?source=first` +
+      `${fin ? "&destination=last" : ""}&roundtrip=false&overview=false`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const datos = (await res.json()) as {
@@ -32,20 +55,14 @@ export async function calcularRuta(inicio: Punto, paradas: ParadaRuta[], fin: Pu
       if (entrada == null || entrada < 1 || entrada > paradas.length) return null;
       orden.push({ paradaId: paradas[entrada - 1].id, minutos: legs[pos - 1].duration / 60, km: legs[pos - 1].distance / 1000 });
     }
-    const minutosTotal = legs.reduce((a, l) => a + l.duration, 0) / 60;
-    const kmTotal = legs.reduce((a, l) => a + l.distance, 0) / 1000;
-    return { orden, minutosTotal, kmTotal };
+    const ultimo = fin ? legs[paradas.length] : null;
+    const final = ultimo ? { minutos: ultimo.duration / 60, km: ultimo.distance / 1000 } : null;
+    const minutosTotal = aRetiro.minutos + orden.reduce((a, t) => a + t.minutos, 0) + (final?.minutos ?? 0);
+    const kmTotal = aRetiro.km + orden.reduce((a, t) => a + t.km, 0) + (final?.km ?? 0);
+    return { aRetiro, orden, final, minutosTotal, kmTotal };
   } catch {
     return null;
   }
-}
-
-/** Tiempo del último tramo (hasta la llegada) = total menos los tramos de las paradas. */
-export function tramoFinal(r: ResultadoRuta) {
-  return {
-    minutos: r.minutosTotal - r.orden.reduce((a, t) => a + t.minutos, 0),
-    km: r.kmTotal - r.orden.reduce((a, t) => a + t.km, 0),
-  };
 }
 
 /**

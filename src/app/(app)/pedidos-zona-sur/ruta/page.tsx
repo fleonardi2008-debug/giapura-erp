@@ -32,6 +32,7 @@ export default async function RutaPage() {
       <PlanificadorRuta
         centro={{ lat: config.zonaCentroLat, lng: config.zonaCentroLng }}
         inicioInicial={config.rutaInicio}
+        retiroInicial={config.rutaRetiro}
         finInicial={config.rutaFin}
         pedidos={pedidos.map((p) => ({
           id: p.id,
