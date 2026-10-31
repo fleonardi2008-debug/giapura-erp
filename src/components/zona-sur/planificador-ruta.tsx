@@ -37,6 +37,7 @@ export function PlanificadorRuta({
     inicio: string;
     retiro: string;
     fin: string;
+    enlaces: string[];
     sinUbicar: PedidoRuta[];
   } | null>(null);
 
@@ -100,7 +101,17 @@ export function PlanificadorRuta({
         toast.error("No pude calcular la ruta ahora. Probá de nuevo en un momento.");
         return;
       }
-      setResultado({ ruta, inicio, retiro, fin: fin.trim(), sinUbicar });
+      // Los enlaces de Google Maps llevan coordenadas (no texto): así no confunde una dirección con otro lugar del país.
+      const texto = (pt: Punto) => `${pt.lat},${pt.lng}`;
+      const puntoDe = new Map(paradas.map((x) => [x.id, x.punto]));
+      const entregas = ruta.orden.map((t) => texto(puntoDe.get(t.paradaId)!));
+      const destino = pFin ? texto(pFin.punto) : entregas[entregas.length - 1];
+      const enlaces = enlacesGoogleMaps(
+        texto(pInicio.punto),
+        [texto(pRetiro.punto), ...(pFin ? entregas : entregas.slice(0, -1))],
+        destino
+      );
+      setResultado({ ruta, inicio, retiro, fin: fin.trim(), enlaces, sinUbicar });
     } catch {
       toast.error("Algo salió mal al calcular la ruta. Probá de nuevo.");
     } finally {
@@ -110,15 +121,7 @@ export function PlanificadorRuta({
   }
 
   const porId = new Map(pedidos.map((p) => [p.id, p]));
-  const enlaces = resultado
-    ? (() => {
-        const dirs = resultado.ruta.orden.map((t) => porId.get(t.paradaId)!.direccion);
-        // sin llegada cargada, el recorrido termina en la última entrega
-        const destino = resultado.fin || dirs[dirs.length - 1];
-        const medio = resultado.fin ? dirs : dirs.slice(0, -1);
-        return enlacesGoogleMaps(resultado.inicio, [resultado.retiro, ...medio], destino);
-      })()
-    : [];
+  const enlaces = resultado?.enlaces ?? [];
 
   return (
     <div className="space-y-6">
