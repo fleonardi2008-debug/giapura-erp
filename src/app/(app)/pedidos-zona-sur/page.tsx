@@ -3,7 +3,7 @@ import { BuscadorPedidos, leerEstadoFiltro } from "@/components/zona-sur/buscado
 import { enlaceComprobante } from "@/lib/comprobante";
 import { filasDatosAndreani } from "@/lib/datos-andreani";
 import { DatosEnvioBoton } from "@/components/zona-sur/datos-envio-boton";
-import { NotaPedido, PasarARetiroCasa } from "@/components/zona-sur/acciones-pedido";
+import { NotaPedido, PasarAEnvioDomicilio, PasarARetiroCasa } from "@/components/zona-sur/acciones-pedido";
 import { prisma } from "@/lib/db";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { buttonVariants } from "@/components/ui/button";
@@ -138,6 +138,7 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
                       pedido.direccion && <div className="text-xs text-muted-foreground">{pedido.direccion}</div>
                     )}
                     {pedido.puntoElegido && <div className="text-xs text-muted-foreground">{pedido.puntoElegido}</div>}
+                    {pedido.metodoEntrega === "ANDREANI" && pedido.andreaniModalidad === "DOMICILIO" && <PasarAEnvioDomicilio pedidoId={pedido.id} />}
                     {pedido.metodoEntrega !== "RETIRO_CASA" && <PasarARetiroCasa pedidoId={pedido.id} />}
                   </TableCell>
                   <TableCell data-label="Pago" className="text-sm">
