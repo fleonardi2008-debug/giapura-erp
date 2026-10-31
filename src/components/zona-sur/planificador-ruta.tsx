@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { guardarPuntosRuta, guardarUbicacionPedido } from "@/lib/actions/zona-sur";
-import { ubicarDireccion, type Punto } from "@/lib/zona-sur-geo";
+import { localidadDe, ubicarDireccion, type Punto } from "@/lib/zona-sur-geo";
 import { calcularRuta, enlacesGoogleMaps, type ResultadoRuta } from "@/lib/zona-sur-ruta";
 
 type PedidoRuta = { id: string; nombre: string; direccion: string; lat: number | null; lng: number | null; estado: string };
@@ -70,6 +70,7 @@ export function PlanificadorRuta({
       }
       await guardarPuntosRuta(inicio, retiro, fin);
 
+      const porIdLocal = new Map(pedidos.map((p) => [p.id, p]));
       const paradas: { id: string; punto: Punto }[] = [];
       const sinUbicar: PedidoRuta[] = [];
       const lista = pedidos.filter((p) => elegidos.has(p.id));
@@ -101,14 +102,23 @@ export function PlanificadorRuta({
         toast.error("No pude calcular la ruta ahora. Probá de nuevo en un momento.");
         return;
       }
-      // Los enlaces de Google Maps llevan coordenadas (no texto): así no confunde una dirección con otro lugar del país.
-      const texto = (pt: Punto) => `${pt.lat},${pt.lng}`;
-      const puntoDe = new Map(paradas.map((x) => [x.id, x.punto]));
-      const entregas = ruta.orden.map((t) => texto(puntoDe.get(t.paradaId)!));
-      const destino = pFin ? texto(pFin.punto) : entregas[entregas.length - 1];
+      // Los enlaces de Google Maps llevan la dirección tal cual la cargó el cliente, completada con el barrio y el partido
+      // del punto ubicado (así encuentra el número exacto y no la confunde con otro lugar del país).
+      const completa = (dir: string, extra: string | null) =>
+        [dir.trim(), extra, "Buenos Aires", "Argentina"].filter(Boolean).join(", ");
+      const entregas: string[] = [];
+      for (let i = 0; i < ruta.orden.length; i++) {
+        const t = ruta.orden[i];
+        setProgreso(`Preparando el enlace de Google Maps (${i + 1} de ${ruta.orden.length})…`);
+        await pausa(1100);
+        const lugar = await localidadDe(paradas.find((x) => x.id === t.paradaId)!.punto);
+        entregas.push(completa(porIdLocal.get(t.paradaId)!.direccion, lugar));
+      }
+      const textoFijo = (dir: string) => completa(dir, null);
+      const destino = fin.trim() ? textoFijo(fin) : entregas[entregas.length - 1];
       const enlaces = enlacesGoogleMaps(
-        texto(pInicio.punto),
-        [texto(pRetiro.punto), ...(pFin ? entregas : entregas.slice(0, -1))],
+        textoFijo(inicio),
+        [textoFijo(retiro), ...(fin.trim() ? entregas : entregas.slice(0, -1))],
         destino
       );
       setResultado({ ruta, inicio, retiro, fin: fin.trim(), enlaces, sinUbicar });

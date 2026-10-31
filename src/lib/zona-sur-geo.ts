@@ -34,3 +34,23 @@ export async function ubicarDireccion(direccion: string, centro: Punto): Promise
     return { estado: "error" };
   }
 }
+
+/**
+ * Barrio/localidad y partido de un punto (Nominatim, búsqueda inversa). Sirve para completar una dirección escrita
+ * a mano ("Zeballos 321 bernal") y que Google Maps no la confunda con otra del país. Si falla devuelve null.
+ */
+export async function localidadDe(punto: Punto): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&zoom=14&addressdetails=1&lat=${punto.lat}&lon=${punto.lng}`,
+      { headers: { Accept: "application/json" } }
+    );
+    if (!res.ok) return null;
+    const a = ((await res.json()) as { address?: Record<string, string> }).address;
+    if (!a) return null;
+    const barrio = a.suburb ?? a.city_district ?? a.town ?? a.city ?? a.village ?? a.quarter;
+    return [barrio, a.county ?? a.state_district ?? a.municipality].filter(Boolean).join(", ") || null;
+  } catch {
+    return null;
+  }
+}
