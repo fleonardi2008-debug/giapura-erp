@@ -105,8 +105,11 @@ export function PlanificadorRuta({
       }
       // Los enlaces de Google Maps llevan la dirección tal cual la cargó el cliente, completada con el barrio y el partido
       // del punto ubicado (así encuentra el número exacto y no la confunde con otro lugar del país).
+      // Las calles con número (Berazategui, Florencio Varela…) a veces se escriben "10 3370": se aclara que es la calle 10.
       const completa = (dir: string, extra: string | null) =>
-        [dir.trim(), extra, "Buenos Aires", "Argentina"].filter(Boolean).join(", ");
+        [dir.trim().replace(/^(?:calle\s+)?(\d{1,3})\s+(\d{1,5})\b/i, "Calle $1 $2"), extra, "Buenos Aires", "Argentina"]
+          .filter(Boolean)
+          .join(", ");
       const entregas: string[] = [];
       for (let i = 0; i < ruta.orden.length; i++) {
         const t = ruta.orden[i];
