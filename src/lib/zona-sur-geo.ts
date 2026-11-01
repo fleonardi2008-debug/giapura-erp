@@ -9,7 +9,7 @@ export function distanciaKm(a: Punto, b: Punto): number {
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
 
-export type ResultadoUbicar = { estado: "ok"; punto: Punto } | { estado: "noencontrada" } | { estado: "error" };
+export type ResultadoUbicar = { estado: "ok"; punto: Punto; lugar?: string } | { estado: "noencontrada" } | { estado: "error" };
 
 /**
  * Busca una dirección en OpenStreetMap (Nominatim). Se llama desde el navegador del cliente.
@@ -25,11 +25,13 @@ export async function ubicarDireccion(direccion: string, centro: Punto): Promise
   try {
     const res = await fetch(url, { headers: { Accept: "application/json" } });
     if (!res.ok) return { estado: "error" };
-    const datos = (await res.json()) as { lat: string; lon: string }[];
+    const datos = (await res.json()) as { lat: string; lon: string; display_name?: string }[];
     if (!datos?.[0]) return { estado: "noencontrada" };
     const punto = { lat: parseFloat(datos[0].lat), lng: parseFloat(datos[0].lon) };
     if (!Number.isFinite(punto.lat) || !Number.isFinite(punto.lng)) return { estado: "noencontrada" };
-    return { estado: "ok", punto };
+    // Los primeros tramos del nombre (calle, barrio, localidad) alcanzan para que el cliente vea dónde la ubicamos.
+    const lugar = datos[0].display_name?.split(", ").slice(0, 3).join(", ");
+    return { estado: "ok", punto, lugar };
   } catch {
     return { estado: "error" };
   }

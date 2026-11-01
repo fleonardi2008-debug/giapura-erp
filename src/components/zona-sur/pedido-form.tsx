@@ -57,6 +57,7 @@ type Verificacion = {
   estado: "ok" | "fuera" | "noencontrada" | "error";
   punto?: Punto;
   km?: number;
+  lugar?: string;
 };
 type MetodoPago = "TRANSFERENCIA" | "EFECTIVO";
 
@@ -240,7 +241,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
     let v: Verificacion;
     if (r.estado === "ok") {
       const km = distanciaKm(centroZona, r.punto);
-      v = { direccion: limpio, estado: km <= config.zonaRadioKm ? "ok" : "fuera", punto: r.punto, km };
+      v = { direccion: limpio, estado: km <= config.zonaRadioKm ? "ok" : "fuera", punto: r.punto, km, lugar: r.lugar };
     } else {
       v = { direccion: limpio, estado: r.estado };
     }
@@ -764,7 +765,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                 id="direccion"
                 value={direccion}
                 onChange={(e) => setDireccion(e.target.value)}
-                placeholder="Calle, número, localidad"
+                placeholder="Calle, número y localidad (ej: Mitre 500, Quilmes)"
                 autoComplete="street-address"
                 className={CAMPO}
                 onBlur={() => void verificarDireccion(direccion)}
@@ -791,6 +792,12 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                         ? `Tu dirección queda fuera de la ${nombreZona} (a ${verifVigente.km?.toFixed(1)} km del centro).`
                         : mensajeVerificacion(verifVigente)}
                     </p>
+                    {verifVigente.estado === "fuera" && verifVigente.lugar && (
+                      <p>
+                        La ubicamos en: <strong>{verifVigente.lugar}</strong>. Si no es tu dirección, agregá la localidad
+                        (ej: Calle 10 3370, Berazategui).
+                      </p>
+                    )}
                     {verifVigente.estado === "fuera" && config.andreaniActivo && (
                       <>
                         <p>Verificá la dirección o elegí envío por Andreani, que llega a todo el país.</p>
