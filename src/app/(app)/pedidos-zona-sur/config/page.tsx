@@ -41,6 +41,7 @@ export default async function ZonaSurConfigPage() {
           puntoQuilmesTexto: config.puntoQuilmesTexto,
           puntoBernalTexto: config.puntoBernalTexto,
           colegioNombre: config.colegioNombre,
+          ventanaTexto: config.ventanaTexto,
           colegioDias: config.colegioDias,
           frascosSueltos: config.frascosSueltos,
           descuentoEfectivo: config.descuentoEfectivo,

@@ -27,6 +27,7 @@ type Config = {
   puntoQuilmesTexto: string | null;
   puntoBernalTexto: string | null;
   colegioNombre: string | null;
+  ventanaTexto: string;
   colegioDias: string | null;
   frascosSueltos: boolean;
   descuentoEfectivo: number;
@@ -270,6 +271,21 @@ export function ZonaSurConfigForm({ config, productos }: { config: Config; produ
               onChange={(e) => setRadioKm(parseFloat(e.target.value))}
               className="w-full accent-primary"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ventanaTexto">Casilla de confirmación del envío a domicilio</Label>
+            <Textarea
+              id="ventanaTexto"
+              name="ventanaTexto"
+              rows={3}
+              maxLength={300}
+              defaultValue={config.ventanaTexto}
+              placeholder="Ej: Voy a estar en mi domicilio el jueves 6/11 entre las 11hs y 15hs"
+            />
+            <p className="text-xs text-muted-foreground">
+              Es el texto que el cliente tiene que tildar para pedir con envío a domicilio. Escribí acá el día y los horarios.
+              Si lo dejás vacío, la casilla no se muestra.
+            </p>
           </div>
         </CardContent>
       </Card>

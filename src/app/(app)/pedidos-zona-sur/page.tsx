@@ -138,6 +138,12 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
                     ) : (
                       pedido.direccion && <div className="text-xs text-muted-foreground">{pedido.direccion}</div>
                     )}
+                    {pedido.metodoEntrega === "ENVIO_ZONA" && pedido.envioPiso && (
+                      <div className="text-xs font-medium">Piso/Depto: {pedido.envioPiso}</div>
+                    )}
+                    {pedido.metodoEntrega === "ENVIO_ZONA" && pedido.envioIndicaciones && (
+                      <div className="text-xs text-muted-foreground">Indicaciones: {pedido.envioIndicaciones}</div>
+                    )}
                     {pedido.puntoElegido && <div className="text-xs text-muted-foreground">{pedido.puntoElegido}</div>}
                     {pedido.metodoEntrega === "ANDREANI" && pedido.andreaniModalidad === "DOMICILIO" && <PasarAEnvioDomicilio pedidoId={pedido.id} />}
                     {pedido.metodoEntrega === "ENVIO_ZONA" && (

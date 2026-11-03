@@ -593,6 +593,7 @@ model ZonaSurConfig {
   zonaCentroLat     Float    @default(-34.7206)
   zonaCentroLng     Float    @default(-58.2681)
   rutaInicio        String   @default("Intendente Pedro Oliveri 535, Quilmes") // desde dónde sale el reparto a domicilio
+  ventanaTexto      String   @default("Voy a estar en mi domicilio entre las 11hs y 15hs del día de la entrega") // casilla obligatoria del envío a domicilio; vacío = no se pide
   rutaRetiro        String   @default("Zeballos 575, Bernal, Quilmes") // primera parada: donde se buscan las cajas con los pedidos
   rutaFin           String   @default("Zeballos 575, Bernal, Quilmes") // dónde termina el reparto; vacío = en la última entrega
   zonaRadioKm       Float    @default(5)
@@ -618,6 +619,7 @@ model ZonaSurPedido {
   clienteTelefono String
   metodoEntrega  ZonaSurMetodoEntrega
   direccion      String? // solo si metodoEntrega = ENVIO_ZONA
+  envioIndicaciones String? // envío a domicilio: indicaciones para encontrar la casa (timbre, portón, entre calles...)
   envioLat       Float? // ubicación verificada del domicilio (para armar la ruta de reparto)
   envioLng       Float?
   andreaniLink   String? // solo si metodoEntrega = ANDREANI: link de un solo uso donde el cliente completa sus datos y paga el envío (ya opcional)

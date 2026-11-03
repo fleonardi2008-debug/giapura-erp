@@ -60,6 +60,7 @@ export default async function ZonaSurPage() {
           cbuAlias: config.cbuAlias,
           titularCuenta: config.titularCuenta,
           colegioNombre: config.colegioNombre,
+          ventanaTexto: config.ventanaTexto,
           colegioDias: parsearDiasColegio(config.colegioDias),
           descuentoEfectivo: config.descuentoEfectivo,
           andreaniActivo: config.andreaniActivo,

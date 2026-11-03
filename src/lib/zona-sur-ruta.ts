@@ -15,9 +15,105 @@ const OSRM = "https://router.project-osrm.org";
 const coord = (p: Punto) => `${p.lng},${p.lat}`;
 
 /**
- * Pide a OSRM (rutas por calles, gratis) el recorrido: salida -> retiro de cajas (primera parada, fija) ->
- * entregas en el mejor orden por tiempo de manejo -> llegada (opcional; si no hay, termina en la última entrega).
- * Se llama desde el navegador. Devuelve null si el servicio no responde.
+ * Mejor orden para pasar por las paradas 1..n saliendo del nodo 0 y, si hay llegada, terminando en el nodo n + 1.
+ * Hasta 12 paradas se prueba todo (programación dinámica: el orden es el mejor posible); con más, se parte de
+ * "ir siempre al más cercano" y se mejora con intercambios (2-opt y mover paradas) hasta que ya no mejora.
+ * `costo[i][j]` es el tiempo de manejo de i a j.
+ */
+export function mejorOrden(costo: number[][], n: number, conLlegada: boolean): number[] {
+  if (n <= 1) return n === 1 ? [1] : [];
+  const fin = conLlegada ? n + 1 : -1;
+  const cierre = (u: number) => (fin >= 0 ? costo[u][fin] : 0);
+
+  if (n <= 12) {
+    const total = 1 << n;
+    const dp = Array.from({ length: total }, () => new Array<number>(n).fill(Infinity));
+    const padre = Array.from({ length: total }, () => new Array<number>(n).fill(-1));
+    for (let j = 0; j < n; j++) dp[1 << j][j] = costo[0][j + 1];
+    for (let mask = 1; mask < total; mask++) {
+      for (let j = 0; j < n; j++) {
+        const actual = dp[mask][j];
+        if (!(mask & (1 << j)) || actual === Infinity) continue;
+        for (let k = 0; k < n; k++) {
+          if (mask & (1 << k)) continue;
+          const nuevo = actual + costo[j + 1][k + 1];
+          const m2 = mask | (1 << k);
+          if (nuevo < dp[m2][k]) {
+            dp[m2][k] = nuevo;
+            padre[m2][k] = j;
+          }
+        }
+      }
+    }
+    let mejor = Infinity;
+    let ultimo = 0;
+    for (let j = 0; j < n; j++) {
+      const t = dp[total - 1][j] + cierre(j + 1);
+      if (t < mejor) {
+        mejor = t;
+        ultimo = j;
+      }
+    }
+    const orden: number[] = [];
+    let mask = total - 1;
+    let j = ultimo;
+    while (j >= 0) {
+      orden.push(j + 1);
+      const previo = padre[mask][j];
+      mask &= ~(1 << j);
+      j = previo;
+    }
+    return orden.reverse();
+  }
+
+  // Muchas paradas: el más cercano primero y después mejoras locales.
+  const pendientes = new Set(Array.from({ length: n }, (_, i) => i + 1));
+  const orden: number[] = [];
+  let actual = 0;
+  while (pendientes.size) {
+    let cercano = -1;
+    for (const p of pendientes) if (cercano < 0 || costo[actual][p] < costo[actual][cercano]) cercano = p;
+    orden.push(cercano);
+    pendientes.delete(cercano);
+    actual = cercano;
+  }
+  const largo = (o: number[]) => {
+    let t = costo[0][o[0]];
+    for (let i = 0; i < o.length - 1; i++) t += costo[o[i]][o[i + 1]];
+    return t + cierre(o[o.length - 1]);
+  };
+  let mejora = true;
+  while (mejora) {
+    mejora = false;
+    for (let i = 0; i < n - 1 && !mejora; i++) {
+      for (let j = i + 1; j < n && !mejora; j++) {
+        const invertido = [...orden.slice(0, i), ...orden.slice(i, j + 1).reverse(), ...orden.slice(j + 1)];
+        if (largo(invertido) < largo(orden) - 1e-9) {
+          orden.splice(0, n, ...invertido);
+          mejora = true;
+        }
+      }
+    }
+    for (let i = 0; i < n && !mejora; i++) {
+      const sin = orden.filter((_, k) => k !== i);
+      for (let j = 0; j <= sin.length && !mejora; j++) {
+        if (j === i) continue;
+        const movido = [...sin.slice(0, j), orden[i], ...sin.slice(j)];
+        if (largo(movido) < largo(orden) - 1e-9) {
+          orden.splice(0, n, ...movido);
+          mejora = true;
+        }
+      }
+    }
+  }
+  return orden;
+}
+
+/**
+ * Calcula el recorrido: salida -> retiro de cajas (primera parada, fija) -> entregas en el mejor orden por tiempo
+ * de manejo -> llegada (opcional; si no hay, termina en la última entrega). Los tiempos entre todos los puntos
+ * los da OSRM (rutas por calles, gratis) en una sola consulta desde el navegador; el orden lo elige `mejorOrden`.
+ * Devuelve null si el servicio no responde.
  */
 export async function calcularRuta(
   inicio: Punto,
@@ -26,40 +122,42 @@ export async function calcularRuta(
   fin: Punto | null
 ): Promise<ResultadoRuta | null> {
   try {
-    const rutaRetiro = await fetch(`${OSRM}/route/v1/driving/${coord(inicio)};${coord(retiro)}?overview=false`);
-    if (!rutaRetiro.ok) return null;
-    const dr = (await rutaRetiro.json()) as { code: string; routes: { duration: number; distance: number }[] };
-    if (dr.code !== "Ok" || !dr.routes?.[0]) return null;
-    const aRetiro = { minutos: dr.routes[0].duration / 60, km: dr.routes[0].distance / 1000 };
-
-    // El recorrido óptimo empieza en el retiro (source=first); si hay llegada, termina ahí (destination=last).
-    const puntos = [retiro, ...paradas.map((p) => p.punto), ...(fin ? [fin] : [])];
-    const url =
-      `${OSRM}/trip/v1/driving/${puntos.map(coord).join(";")}?source=first` +
-      `${fin ? "&destination=last" : ""}&roundtrip=false&overview=false`;
-    const res = await fetch(url);
+    // Puntos: 0 = salida, 1 = retiro, 2..n+1 = entregas, n+2 = llegada (si hay).
+    const n = paradas.length;
+    const puntos = [inicio, retiro, ...paradas.map((p) => p.punto), ...(fin ? [fin] : [])];
+    const res = await fetch(
+      `${OSRM}/table/v1/driving/${puntos.map(coord).join(";")}?annotations=duration,distance`
+    );
     if (!res.ok) return null;
-    const datos = (await res.json()) as {
-      code: string;
-      waypoints: { waypoint_index: number }[];
-      trips: { legs: { duration: number; distance: number }[] }[];
-    };
-    if (datos.code !== "Ok" || !datos.trips?.[0]) return null;
-    const legs = datos.trips[0].legs;
-    // waypoints[i].waypoint_index = posición de la entrada i dentro del recorrido
-    const porPosicion = new Map<number, number>();
-    datos.waypoints.forEach((w, entrada) => porPosicion.set(w.waypoint_index, entrada));
-    const orden: TramoRuta[] = [];
-    for (let pos = 1; pos <= paradas.length; pos++) {
-      const entrada = porPosicion.get(pos);
-      if (entrada == null || entrada < 1 || entrada > paradas.length) return null;
-      orden.push({ paradaId: paradas[entrada - 1].id, minutos: legs[pos - 1].duration / 60, km: legs[pos - 1].distance / 1000 });
+    const datos = (await res.json()) as { code: string; durations: (number | null)[][]; distances: (number | null)[][] };
+    if (datos.code !== "Ok" || !datos.durations || !datos.distances) return null;
+    const dur = datos.durations;
+    const dist = datos.distances;
+    for (const fila of dur) if (fila.some((v) => v == null)) return null;
+
+    // Se arma la submatriz que arranca en el retiro: 0 = retiro, 1..n = entregas, n+1 = llegada.
+    const idx = [1, ...Array.from({ length: n }, (_, i) => i + 2), ...(fin ? [n + 2] : [])];
+    const costo = idx.map((i) => idx.map((j) => dur[i][j] as number));
+    const orden = mejorOrden(costo, n, !!fin);
+
+    const aRetiro = { minutos: (dur[0][1] as number) / 60, km: (dist[0][1] as number) / 1000 };
+    const tramos: TramoRuta[] = [];
+    let previo = 1;
+    for (const k of orden) {
+      const nodo = k + 1; // posición real en `puntos`
+      tramos.push({
+        paradaId: paradas[k - 1].id,
+        minutos: (dur[previo][nodo] as number) / 60,
+        km: (dist[previo][nodo] as number) / 1000,
+      });
+      previo = nodo;
     }
-    const ultimo = fin ? legs[paradas.length] : null;
-    const final = ultimo ? { minutos: ultimo.duration / 60, km: ultimo.distance / 1000 } : null;
-    const minutosTotal = aRetiro.minutos + orden.reduce((a, t) => a + t.minutos, 0) + (final?.minutos ?? 0);
-    const kmTotal = aRetiro.km + orden.reduce((a, t) => a + t.km, 0) + (final?.km ?? 0);
-    return { aRetiro, orden, final, minutosTotal, kmTotal };
+    const final = fin
+      ? { minutos: (dur[previo][n + 2] as number) / 60, km: (dist[previo][n + 2] as number) / 1000 }
+      : null;
+    const minutosTotal = aRetiro.minutos + tramos.reduce((a, t) => a + t.minutos, 0) + (final?.minutos ?? 0);
+    const kmTotal = aRetiro.km + tramos.reduce((a, t) => a + t.km, 0) + (final?.km ?? 0);
+    return { aRetiro, orden: tramos, final, minutosTotal, kmTotal };
   } catch {
     return null;
   }

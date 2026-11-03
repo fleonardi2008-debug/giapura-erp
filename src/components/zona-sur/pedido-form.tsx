@@ -43,6 +43,7 @@ type Config = {
   cbuAlias: string | null;
   titularCuenta: string | null;
   colegioNombre: string | null;
+  ventanaTexto: string;
   colegioDias: string[];
   andreaniActivo: boolean;
   andreaniTexto: string | null;
@@ -159,6 +160,9 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [metodoEntrega, setMetodoEntrega] = useState<MetodoEntrega>("ENVIO_ZONA");
   const [direccion, setDireccion] = useState("");
+  const [pisoDepto, setPisoDepto] = useState("");
+  const [indicaciones, setIndicaciones] = useState("");
+  const [confirmaVentana, setConfirmaVentana] = useState(false);
   const [colegioDia, setColegioDia] = useState("");
   const [cpEstimado, setCpEstimado] = useState("");
   const [calculadoraAbierta, setCalculadoraAbierta] = useState(false);
@@ -178,7 +182,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
     return () => cancelAnimationFrame(id);
   }, []);
 
-  const hayColegio = !!config.colegioNombre?.trim() && config.colegioDias.length > 0;
+  const hayColegio = false; // el retiro en el colegio ya no se ofrece
   const hayFrascosSueltos = skus.some((s) => !s.esPack);
 
   const subtotal = useMemo(
@@ -300,7 +304,17 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
     formData.set("items", JSON.stringify(items));
     formData.set("metodoEntrega", metodoEntrega);
     formData.set("metodoPago", metodoPago);
-    if (metodoEntrega === "ENVIO_ZONA") formData.set("direccion", direccion);
+    if (metodoEntrega === "ENVIO_ZONA") {
+      if (config.ventanaTexto.trim() && !confirmaVentana) {
+        toast.error("Tildá la casilla de confirmación para poder pedir");
+        document.getElementById("ventana")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      formData.set("direccion", direccion);
+      formData.set("envioPiso", pisoDepto);
+      formData.set("envioIndicaciones", indicaciones);
+      formData.set("ventanaConfirmada", "1");
+    }
     if (metodoEntrega === "COLEGIO") formData.set("colegioDia", colegioDia);
 
     startTransition(async () => {
@@ -815,6 +829,44 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                 )}
               </div>
             </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="pisoDepto">Piso y departamento (si es edificio)</Label>
+                <Input
+                  id="pisoDepto"
+                  value={pisoDepto}
+                  onChange={(e) => setPisoDepto(e.target.value)}
+                  placeholder="Ej: 3° B  ·  si es casa, dejalo vacío"
+                  className={CAMPO}
+                  maxLength={100}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="indicaciones">Indicaciones para encontrarte</Label>
+                <Input
+                  id="indicaciones"
+                  value={indicaciones}
+                  onChange={(e) => setIndicaciones(e.target.value)}
+                  placeholder="Ej: portón negro, timbre 2, entre Mitre y Sarmiento"
+                  className={CAMPO}
+                  maxLength={500}
+                />
+              </div>
+            </div>
+            {config.ventanaTexto.trim() && (
+              <label
+                id="ventana"
+                className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={confirmaVentana}
+                  onChange={(e) => setConfirmaVentana(e.target.checked)}
+                  className="mt-0.5 size-5 shrink-0 accent-[var(--primary)]"
+                />
+                <strong className="whitespace-pre-line font-semibold">{config.ventanaTexto.trim()}</strong>
+              </label>
+            )}
           </div>
         )}
       </Revelar>

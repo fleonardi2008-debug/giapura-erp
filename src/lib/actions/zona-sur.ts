@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { put } from "@vercel/blob";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -10,6 +11,7 @@ import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
 import { estimarEnvioAndreaniCercano, numeroDeCodigoPostal, parsearTarifasAndreani } from "@/lib/zona-sur-andreani";
 import { descuentoEfectivo } from "@/lib/zona-sur-precios";
 import { leerStockZonaSur } from "@/lib/zona-sur-stock";
+import { avisarPorWhatsapp } from "@/lib/avisos-whatsapp";
 import { distanciaKm } from "@/lib/zona-sur-geo";
 
 async function requireOwner() {
@@ -33,6 +35,7 @@ const configSchema = z.object({
   puntoBernalTexto: z.string().optional(),
   colegioNombre: z.string().optional(),
   colegioDias: z.string().optional(),
+  ventanaTexto: z.string().max(300, "El texto de confirmación es demasiado largo (máximo 300 caracteres)").optional(),
   andreaniTexto: z.string().optional(),
   andreaniTarifas: z.string().optional(),
   descuentoEfectivo: z.coerce.number().int("Tiene que ser un número entero").min(0, "No puede ser negativo").max(50, "El descuento en efectivo no puede pasar del 50%"),
@@ -54,6 +57,7 @@ export async function guardarZonaSurConfig(formData: FormData) {
     puntoBernalTexto: formData.get("puntoBernalTexto") ?? "",
     colegioNombre: formData.get("colegioNombre") ?? "",
     colegioDias: formData.get("colegioDias") ?? "",
+    ventanaTexto: formData.get("ventanaTexto") ?? "",
     andreaniTexto: formData.get("andreaniTexto") ?? "",
     andreaniTarifas: formData.get("andreaniTarifas") ?? "",
     descuentoEfectivo: formData.get("descuentoEfectivo") || 0,
@@ -220,6 +224,8 @@ const pedidoPublicoSchema = z.object({
   envioCalle: z.string().optional(),
   envioNumero: z.string().optional(),
   envioPiso: z.string().optional(),
+  envioIndicaciones: z.string().optional(),
+  ventanaConfirmada: z.string().optional(),
   envioCp: z.string().optional(),
   envioCiudad: z.string().optional(),
   envioProvincia: z.string().optional(),
@@ -251,6 +257,8 @@ export async function crearZonaSurPedido(formData: FormData) {
     envioCalle: formData.get("envioCalle") ?? "",
     envioNumero: formData.get("envioNumero") ?? "",
     envioPiso: formData.get("envioPiso") ?? "",
+    envioIndicaciones: formData.get("envioIndicaciones") ?? "",
+    ventanaConfirmada: formData.get("ventanaConfirmada") ?? "",
     envioCp: formData.get("envioCp") ?? "",
     envioCiudad: formData.get("envioCiudad") ?? "",
     envioProvincia: formData.get("envioProvincia") ?? "",
@@ -264,6 +272,9 @@ export async function crearZonaSurPedido(formData: FormData) {
 
   if (data.metodoEntrega === "ENVIO_ZONA" && !data.direccion?.trim()) {
     return { error: "Falta la dirección de envío" };
+  }
+  if ((data.envioPiso?.length ?? 0) > 100 || (data.envioIndicaciones?.length ?? 0) > 500) {
+    return { error: "El piso/departamento o las indicaciones son demasiado largos" };
   }
 
   // El efectivo no se puede cobrar a distancia: con Andreani solo se paga por transferencia.
@@ -327,6 +338,9 @@ export async function crearZonaSurPedido(formData: FormData) {
   // Envío a domicilio: el navegador ubica la dirección y manda las coordenadas; acá se vuelve a comprobar
   // que caigan dentro del círculo de la zona (el mapa que ve el cliente).
   if (data.metodoEntrega === "ENVIO_ZONA") {
+    if (config.ventanaTexto.trim() && data.ventanaConfirmada !== "1") {
+      return { error: "Tildá la casilla de confirmación del domicilio para poder pedir" };
+    }
     if (data.lat == null || data.lng == null || !Number.isFinite(data.lat) || !Number.isFinite(data.lng)) {
       return { error: "No pudimos verificar tu dirección. Revisala y probá de nuevo." };
     }
@@ -343,26 +357,14 @@ export async function crearZonaSurPedido(formData: FormData) {
     return { error: "Por ahora no hacemos envíos por Andreani. Probá con otra forma de entrega." };
   }
 
-  // Los retiros en puntos de encuentro (Quilmes y Bernal) ya no se ofrecen.
-  if (data.metodoEntrega === "PUNTO_QUILMES" || data.metodoEntrega === "PUNTO_BERNAL") {
-    return { error: "Ya no hacemos retiros en puntos de encuentro. Elegí otra forma de entrega." };
+  // Los retiros en puntos de encuentro (Quilmes y Bernal) y en el colegio ya no se ofrecen.
+  if (data.metodoEntrega === "PUNTO_QUILMES" || data.metodoEntrega === "PUNTO_BERNAL" || data.metodoEntrega === "COLEGIO") {
+    return { error: "Ya no hacemos retiros en puntos de encuentro ni en el colegio. Elegí otra forma de entrega." };
   }
   let puntoElegido: string | null = null;
 
-  // Colegio: el día tiene que ser uno de los que están ofrecidos hoy. Se guarda el día
-  // tal cual figuraba y, en puntoElegido, el lugar + el día (así lo muestran etiquetas y lista).
-  let colegioDia: string | null = null;
-  if (data.metodoEntrega === "COLEGIO") {
-    const dias = parsearDiasColegio(config.colegioDias);
-    if (!config.colegioNombre?.trim() || dias.length === 0) {
-      return { error: "Por ahora no hay entregas en el colegio. Probá con envío o con un punto de encuentro." };
-    }
-    const elegido = data.colegioDia?.trim();
-    if (!elegido) return { error: "Elegí el día en que te lo llevamos al colegio" };
-    if (!dias.includes(elegido)) return { error: "Ese día ya no está disponible. Elegí otro de la lista." };
-    colegioDia = elegido;
-    puntoElegido = `${config.colegioNombre.trim()} — ${elegido}`;
-  }
+  // El colegio ya no se ofrece: los pedidos nuevos nunca llevan día de colegio.
+  const colegioDia: string | null = null;
 
   // El precio de cada producto se busca en el servidor (nunca se confia en lo
   // que mande el navegador), para que no se pueda pedir con precio distinto.
@@ -453,7 +455,7 @@ export async function crearZonaSurPedido(formData: FormData) {
     }
   }
 
-  await prisma.zonaSurPedido.create({
+  const pedido = await prisma.zonaSurPedido.create({
     data: {
       clienteNombre: data.clienteNombre,
       clienteEmail: data.clienteEmail,
@@ -461,7 +463,12 @@ export async function crearZonaSurPedido(formData: FormData) {
       metodoEntrega: data.metodoEntrega,
       direccion: data.metodoEntrega === "ENVIO_ZONA" ? data.direccion : (datosAndreani?.direccion ?? null),
       ...(data.metodoEntrega === "ENVIO_ZONA" && data.lat != null && data.lng != null
-        ? { envioLat: data.lat, envioLng: data.lng }
+        ? {
+            envioLat: data.lat,
+            envioLng: data.lng,
+            envioPiso: data.envioPiso?.trim() || null,
+            envioIndicaciones: data.envioIndicaciones?.trim() || null,
+          }
         : {}),
       ...(datosAndreani
         ? {
@@ -488,8 +495,32 @@ export async function crearZonaSurPedido(formData: FormData) {
     },
   });
 
+  // Aviso por WhatsApp al dueño con todos los datos (después de responderle al cliente; si falla no pasa nada).
+  const lineas = [
+    "🛒 Nuevo pedido Zona Sur",
+    `${data.clienteNombre} · ${data.clienteTelefono}`,
+    data.clienteEmail,
+    "",
+    ...itemsParaCrear.map((i) => `${i.cantidad} × ${i.nombre}`),
+    "",
+    data.metodoEntrega === "ENVIO_ZONA"
+      ? `📍 Domicilio: ${data.direccion?.trim()}` +
+        (data.envioPiso?.trim() ? `\nPiso/Depto: ${data.envioPiso.trim()}` : "") +
+        (data.envioIndicaciones?.trim() ? `\nIndicaciones: ${data.envioIndicaciones.trim()}` : "") +
+        (config.ventanaTexto.trim() ? `\nConfirmó: "${config.ventanaTexto.trim()}"` : "")
+      : data.metodoEntrega === "ANDREANI"
+        ? `📦 Andreani (${data.andreaniModalidad === "DOMICILIO" ? "a domicilio" : "a sucursal"}): ${datosAndreani?.direccion ?? ""}\nDNI ${datosAndreani?.clienteDni ?? ""}` +
+          (envioAConfirmar ? "\nEnvío a confirmar" : "")
+        : `Entrega: ${data.metodoEntrega}`,
+    data.metodoPago === "EFECTIVO"
+      ? `💵 Efectivo: $${Number(total).toLocaleString("es-AR")}` + (data.pagaCon ? ` (paga con $${data.pagaCon.toLocaleString("es-AR")})` : "")
+      : `🏦 Transferencia: $${Number(total).toLocaleString("es-AR")}` + (comprobanteUrl ? " (con comprobante)" : " (sin comprobante)"),
+  ];
+  after(() => avisarPorWhatsapp(lineas.join("\n")));
+
   revalidatePath("/pedidos-zona-sur");
   revalidatePath("/pedidos-zona-sur/colegio");
+  void pedido;
   return { success: true };
 }
 

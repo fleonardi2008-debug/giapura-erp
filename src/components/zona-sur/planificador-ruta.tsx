@@ -8,7 +8,7 @@ import { localidadDe, ubicarDireccion, type Punto } from "@/lib/zona-sur-geo";
 import { recordatorioDomicilioUrl } from "@/lib/zona-sur-recordatorio";
 import { calcularRuta, enlacesGoogleMaps, type ResultadoRuta } from "@/lib/zona-sur-ruta";
 
-type PedidoRuta = { id: string; nombre: string; telefono: string; efectivo: boolean; total: number; direccion: string; lat: number | null; lng: number | null; estado: string };
+type PedidoRuta = { id: string; nombre: string; piso: string | null; indicaciones: string | null; telefono: string; efectivo: boolean; total: number; direccion: string; lat: number | null; lng: number | null; estado: string };
 
 const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const min = (n: number) => `${Math.max(1, Math.round(n))} min`;
@@ -197,6 +197,9 @@ export function PlanificadorRuta({
                   <span className="min-w-0 text-sm">
                     <span className="block font-medium">{p.nombre}</span>
                     <span className="block text-muted-foreground">{p.direccion}</span>
+                    {(p.piso || p.indicaciones) && (
+                      <span className="block text-xs">{[p.piso && `Piso/Depto: ${p.piso}`, p.indicaciones].filter(Boolean).join(" · ")}</span>
+                    )}
                   </span>
                   <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                     {p.estado === "PREPARADO" ? "Preparado" : "Pendiente"}
@@ -246,6 +249,9 @@ export function PlanificadorRuta({
                   <span className="min-w-0">
                     <span className="block font-medium">{p.nombre}</span>
                     <span className="block text-muted-foreground">{p.direccion}</span>
+                    {(p.piso || p.indicaciones) && (
+                      <span className="block text-xs">{[p.piso && `Piso/Depto: ${p.piso}`, p.indicaciones].filter(Boolean).join(" · ")}</span>
+                    )}
                     <span className="block text-xs text-muted-foreground">
                       {min(t.minutos)} desde la parada anterior · {t.km.toFixed(1)} km
                     </span>
