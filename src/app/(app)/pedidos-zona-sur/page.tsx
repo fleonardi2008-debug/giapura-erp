@@ -24,6 +24,7 @@ const ENTREGA_LABEL: Record<string, string> = {
   COLEGIO: "Entrega en el colegio",
   ANDREANI: "Envío por Andreani",
   RETIRO_CASA: "Retiro por la casa",
+  RETIRO_IMPA: "Retiro en el IMPA",
 };
 
 const PAGO_LABEL: Record<string, string> = {
@@ -37,6 +38,7 @@ export default async function PedidosZonaSurPage({ searchParams }: { searchParam
   const estado = leerEstadoFiltro(params.estado);
   const pedidos = await prisma.zonaSurPedido.findMany({
     where: {
+      metodoEntrega: { not: "RETIRO_IMPA" },
       ...(q ? { clienteNombre: { contains: q, mode: "insensitive" as const } } : {}),
       ...(estado ? { estado } : {}),
     },

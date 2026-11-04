@@ -156,6 +156,8 @@ model Sku {
   // Precio de la página de Zona Sur (/zona-sur). Si está vacío se usa precioVenta (el online).
   // Se carga desde Pedidos Zona Sur → Configurar.
   precioZonaSur Decimal? @db.Decimal(14, 2)
+  precioImpa Decimal? @db.Decimal(14, 2) // precio de la página del IMPA; vacío = no se ofrece ahí
+  precioImpaTachado Decimal? @db.Decimal(14, 2) // precio de lista que se muestra tachado
   // Stock de frascos que Fran reparte él mismo en Zona Sur (todo menos Andreani, que sale de fábrica).
   // Null = sin límite ni barra. Se carga desde Pedidos Zona Sur → Configurar.
   stockZonaSur Int?
@@ -570,6 +572,7 @@ enum ZonaSurMetodoEntrega {
   COLEGIO
   ANDREANI
   RETIRO_CASA
+  RETIRO_IMPA
 }
 
 enum ZonaSurMetodoPago {
@@ -593,6 +596,9 @@ model ZonaSurConfig {
   zonaCentroLat     Float    @default(-34.7206)
   zonaCentroLng     Float    @default(-58.2681)
   rutaInicio        String   @default("Intendente Pedro Oliveri 535, Quilmes") // desde dónde sale el reparto a domicilio
+  impaDias          String? // días de retiro en el IMPA, uno por línea
+  impaOpciones      String   @default("A la entrada\nA la salida") // momentos de retiro de cada día, uno por línea
+  impaLugar         String? // dónde se retira en el IMPA
   whatsappContacto  String   @default("5491168843413") // WhatsApp del dueño, al que el cliente le manda su pedido (solo dígitos, con código de país)
   ventanaTexto      String   @default("Voy a estar en mi domicilio entre las 11hs y 15hs del día de la entrega") // casilla obligatoria del envío a domicilio; vacío = no se pide
   rutaRetiro        String   @default("Zeballos 575, Bernal, Quilmes") // primera parada: donde se buscan las cajas con los pedidos

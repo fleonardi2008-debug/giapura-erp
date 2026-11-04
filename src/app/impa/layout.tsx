@@ -1,0 +1,25 @@
+import type { Metadata } from "next";
+import { Playfair_Display, Nanum_Pen_Script } from "next/font/google";
+import "@fontsource/aileron/700.css";
+import "../zona-sur/zona-sur.css";
+
+export const metadata: Metadata = {
+  title: "Pedidos IMPA | Giapura",
+  description: "Pedí tu pack de Giapura y retiralo en el IMPA.",
+};
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-playfair",
+});
+
+const nanumPen = Nanum_Pen_Script({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-nanum-pen",
+});
+
+export default function ImpaLayout({ children }: { children: React.ReactNode }) {
+  return <div className={`${playfair.variable} ${nanumPen.variable}`}>{children}</div>;
+}

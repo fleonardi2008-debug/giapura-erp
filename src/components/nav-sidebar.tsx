@@ -19,6 +19,7 @@ const linksDueno = [
   { href: "/stock", label: "Stock" },
   { href: "/pedidos", label: "Pedidos" },
   { href: "/pedidos-zona-sur", label: "Pedidos Zona Sur" },
+  { href: "/pedidos-impa", label: "Pedidos IMPA" },
   { href: "/etiquetas", label: "Etiquetas Zona Sur" },
   { href: "/gastos", label: "Gastos" },
   { href: "/resultados", label: "Estado de resultados" },

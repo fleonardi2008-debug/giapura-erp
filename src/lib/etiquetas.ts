@@ -51,6 +51,7 @@ export const ENTREGA_LABEL: Record<ZonaSurMetodoEntrega, string> = {
   COLEGIO: "Entrega en el colegio",
   ANDREANI: "Envío por Andreani",
   RETIRO_CASA: "Retiro por la casa",
+  RETIRO_IMPA: "Retiro en el IMPA",
 };
 
 /** Código corto para identificar el pedido a simple vista (ej: "K3F9Q"). */

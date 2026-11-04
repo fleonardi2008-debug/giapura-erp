@@ -64,14 +64,14 @@ type Verificacion = {
 type MetodoPago = "TRANSFERENCIA" | "EFECTIVO";
 
 // Campos y botones pensados para el pulgar: 48 px de alto y letra de 16 px (evita el zoom automatico en iPhone).
-const CAMPO = "h-12 text-base";
-const BOTON_CANTIDAD = "size-11 rounded-full border-transparent bg-[var(--card)] text-xl shadow-sm transition-transform duration-150 active:scale-90";
+export const CAMPO = "h-12 text-base";
+export const BOTON_CANTIDAD = "size-11 rounded-full border-transparent bg-[var(--card)] text-xl shadow-sm transition-transform duration-150 active:scale-90";
 
-function moneyAR(n: number) {
+export function moneyAR(n: number) {
   return n.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 }
 
-function TarjetaOpcion({
+export function TarjetaOpcion({
   activo,
   onClick,
   disabled,
@@ -117,7 +117,7 @@ function TarjetaOpcion({
 }
 
 /** Encabezado de cada paso: círculo con el número + título. */
-function Paso({ n, titulo, nota }: { n: number; titulo: string; nota?: string }) {
+export function Paso({ n, titulo, nota }: { n: number; titulo: string; nota?: string }) {
   return (
     <div className="flex items-center gap-3">
       <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--primary)] text-sm font-semibold text-[var(--primary-foreground)]">
@@ -132,7 +132,7 @@ function Paso({ n, titulo, nota }: { n: number; titulo: string; nota?: string })
 }
 
 /** Sección que aparece suavemente cuando llega a la pantalla (una sola vez). */
-function Revelar({ className, children }: { className?: string; children: React.ReactNode }) {
+export function Revelar({ className, children }: { className?: string; children: React.ReactNode }) {
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
