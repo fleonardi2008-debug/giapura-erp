@@ -42,6 +42,7 @@ export default async function ZonaSurConfigPage() {
           puntoBernalTexto: config.puntoBernalTexto,
           colegioNombre: config.colegioNombre,
           ventanaTexto: config.ventanaTexto,
+          whatsappContacto: config.whatsappContacto,
           colegioDias: config.colegioDias,
           frascosSueltos: config.frascosSueltos,
           descuentoEfectivo: config.descuentoEfectivo,

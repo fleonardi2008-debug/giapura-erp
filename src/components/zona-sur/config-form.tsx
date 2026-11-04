@@ -28,6 +28,7 @@ type Config = {
   puntoBernalTexto: string | null;
   colegioNombre: string | null;
   ventanaTexto: string;
+  whatsappContacto: string;
   colegioDias: string | null;
   frascosSueltos: boolean;
   descuentoEfectivo: number;
@@ -271,6 +272,20 @@ export function ZonaSurConfigForm({ config, productos }: { config: Config; produ
               onChange={(e) => setRadioKm(parseFloat(e.target.value))}
               className="w-full accent-primary"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="whatsappContacto">Tu WhatsApp (recibe los pedidos)</Label>
+            <Input
+              id="whatsappContacto"
+              name="whatsappContacto"
+              inputMode="numeric"
+              defaultValue={config.whatsappContacto}
+              placeholder="5491112345678"
+            />
+            <p className="text-xs text-muted-foreground">
+              Con código de país y sin signos. Al terminar de pedir, el cliente tiene un botón que abre WhatsApp con tu chat
+              y su pedido ya escrito.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="ventanaTexto">Casilla de confirmación del envío a domicilio</Label>

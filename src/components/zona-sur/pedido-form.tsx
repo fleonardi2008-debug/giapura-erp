@@ -44,6 +44,7 @@ type Config = {
   titularCuenta: string | null;
   colegioNombre: string | null;
   ventanaTexto: string;
+  whatsappContacto: string;
   colegioDias: string[];
   andreaniActivo: boolean;
   andreaniTexto: string | null;
@@ -160,6 +161,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [metodoEntrega, setMetodoEntrega] = useState<MetodoEntrega>("ENVIO_ZONA");
   const [direccion, setDireccion] = useState("");
+  const [pagaConValor, setPagaConValor] = useState("");
   const [pisoDepto, setPisoDepto] = useState("");
   const [indicaciones, setIndicaciones] = useState("");
   const [confirmaVentana, setConfirmaVentana] = useState(false);
@@ -353,6 +355,31 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
   }
 
   if (enviado) {
+    // Pedido ya escrito para mandárselo a Fran por WhatsApp (el cliente solo tiene que tocar "enviar").
+    const plata = (n: number) => `$${n.toLocaleString("es-AR")}`;
+    const entrega =
+      metodoEntrega === "ENVIO_ZONA"
+        ? `Envío a domicilio: ${direccion.trim()}` +
+          (pisoDepto.trim() ? `\nPiso/Depto: ${pisoDepto.trim()}` : "") +
+          (indicaciones.trim() ? `\nIndicaciones: ${indicaciones.trim()}` : "")
+        : metodoEntrega === "ANDREANI"
+          ? "Envío por Andreani"
+          : "Entrega a coordinar";
+    const mensajePedido = [
+      `Hola Fran! Soy ${nombre.trim()}, acabo de hacer un pedido:`,
+      ...skus.filter((s) => (cantidades[s.id] ?? 0) > 0).map((s) => `${cantidades[s.id]} × ${s.nombre}`),
+      "",
+      entrega,
+      ...(metodoPago === "EFECTIVO"
+        ? [
+            `Pago en efectivo: ${plata(totalConEnvio)}`,
+            `Paga con: ${plata(Number(pagaConValor) || 0)}`,
+            `Vuelto: ${plata(Math.max(0, (Number(pagaConValor) || 0) - totalConEnvio))}`,
+          ]
+        : [`Pago por transferencia: ${plata(totalConEnvio)}`]),
+      `Mi teléfono: ${telefono.trim()}`,
+    ].join("\n");
+    const numeroFran = config.whatsappContacto.replace(/\D/g, "");
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
         <svg viewBox="0 0 52 52" className="gia-entra size-20" fill="none" aria-hidden>
@@ -372,6 +399,21 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                 : "la entrega en el punto de encuentro"}
           .
         </p>
+        {numeroFran && (
+          <a
+            href={`https://wa.me/${numeroFran}?text=${encodeURIComponent(mensajePedido)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#25d366] px-6 text-base font-semibold text-white shadow-sm"
+          >
+            Mandar mi pedido por WhatsApp
+          </a>
+        )}
+        {numeroFran && (
+          <p className="text-xs text-[var(--muted-foreground)]">
+            Tocá el botón y después &quot;enviar&quot; en WhatsApp: así me llega tu pedido completo y lo preparo enseguida.
+          </p>
+        )}
         {metodoEntrega === "COLEGIO" && (
           <p className="rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm">
             <strong>{colegioDia}</strong>
@@ -905,6 +947,8 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
               type="number"
               inputMode="numeric"
               className={CAMPO}
+              value={pagaConValor}
+              onChange={(e) => setPagaConValor(e.target.value)}
               min={totalConEnvio}
               step="1"
               placeholder={`Ej: ${Math.ceil(totalConEnvio / 1000) * 1000}`}

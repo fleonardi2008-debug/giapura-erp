@@ -593,6 +593,7 @@ model ZonaSurConfig {
   zonaCentroLat     Float    @default(-34.7206)
   zonaCentroLng     Float    @default(-58.2681)
   rutaInicio        String   @default("Intendente Pedro Oliveri 535, Quilmes") // desde dónde sale el reparto a domicilio
+  whatsappContacto  String   @default("5491168843413") // WhatsApp del dueño, al que el cliente le manda su pedido (solo dígitos, con código de país)
   ventanaTexto      String   @default("Voy a estar en mi domicilio entre las 11hs y 15hs del día de la entrega") // casilla obligatoria del envío a domicilio; vacío = no se pide
   rutaRetiro        String   @default("Zeballos 575, Bernal, Quilmes") // primera parada: donde se buscan las cajas con los pedidos
   rutaFin           String   @default("Zeballos 575, Bernal, Quilmes") // dónde termina el reparto; vacío = en la última entrega

@@ -2,7 +2,6 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
 import { put } from "@vercel/blob";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -11,7 +10,6 @@ import { parsearDiasColegio } from "@/lib/zona-sur-colegio";
 import { estimarEnvioAndreaniCercano, numeroDeCodigoPostal, parsearTarifasAndreani } from "@/lib/zona-sur-andreani";
 import { descuentoEfectivo } from "@/lib/zona-sur-precios";
 import { leerStockZonaSur } from "@/lib/zona-sur-stock";
-import { avisarPorWhatsapp } from "@/lib/avisos-whatsapp";
 import { distanciaKm } from "@/lib/zona-sur-geo";
 
 async function requireOwner() {
@@ -35,6 +33,7 @@ const configSchema = z.object({
   puntoBernalTexto: z.string().optional(),
   colegioNombre: z.string().optional(),
   colegioDias: z.string().optional(),
+  whatsappContacto: z.string().optional(),
   ventanaTexto: z.string().max(300, "El texto de confirmación es demasiado largo (máximo 300 caracteres)").optional(),
   andreaniTexto: z.string().optional(),
   andreaniTarifas: z.string().optional(),
@@ -57,6 +56,7 @@ export async function guardarZonaSurConfig(formData: FormData) {
     puntoBernalTexto: formData.get("puntoBernalTexto") ?? "",
     colegioNombre: formData.get("colegioNombre") ?? "",
     colegioDias: formData.get("colegioDias") ?? "",
+    whatsappContacto: formData.get("whatsappContacto") ?? "",
     ventanaTexto: formData.get("ventanaTexto") ?? "",
     andreaniTexto: formData.get("andreaniTexto") ?? "",
     andreaniTarifas: formData.get("andreaniTarifas") ?? "",
@@ -113,6 +113,7 @@ export async function guardarZonaSurConfig(formData: FormData) {
   const data = {
     ...parsed.data,
     colegioDias: parsearDiasColegio(parsed.data.colegioDias).join("\n"),
+    whatsappContacto: (parsed.data.whatsappContacto ?? "").replace(/\D/g, ""),
     andreaniActivo: formData.get("andreaniActivo") === "on",
     frascosSueltos: formData.get("frascosSueltos") === "on",
   };
@@ -455,7 +456,7 @@ export async function crearZonaSurPedido(formData: FormData) {
     }
   }
 
-  const pedido = await prisma.zonaSurPedido.create({
+  await prisma.zonaSurPedido.create({
     data: {
       clienteNombre: data.clienteNombre,
       clienteEmail: data.clienteEmail,
@@ -495,32 +496,8 @@ export async function crearZonaSurPedido(formData: FormData) {
     },
   });
 
-  // Aviso por WhatsApp al dueño con todos los datos (después de responderle al cliente; si falla no pasa nada).
-  const lineas = [
-    "🛒 Nuevo pedido Zona Sur",
-    `${data.clienteNombre} · ${data.clienteTelefono}`,
-    data.clienteEmail,
-    "",
-    ...itemsParaCrear.map((i) => `${i.cantidad} × ${i.nombre}`),
-    "",
-    data.metodoEntrega === "ENVIO_ZONA"
-      ? `📍 Domicilio: ${data.direccion?.trim()}` +
-        (data.envioPiso?.trim() ? `\nPiso/Depto: ${data.envioPiso.trim()}` : "") +
-        (data.envioIndicaciones?.trim() ? `\nIndicaciones: ${data.envioIndicaciones.trim()}` : "") +
-        (config.ventanaTexto.trim() ? `\nConfirmó: "${config.ventanaTexto.trim()}"` : "")
-      : data.metodoEntrega === "ANDREANI"
-        ? `📦 Andreani (${data.andreaniModalidad === "DOMICILIO" ? "a domicilio" : "a sucursal"}): ${datosAndreani?.direccion ?? ""}\nDNI ${datosAndreani?.clienteDni ?? ""}` +
-          (envioAConfirmar ? "\nEnvío a confirmar" : "")
-        : `Entrega: ${data.metodoEntrega}`,
-    data.metodoPago === "EFECTIVO"
-      ? `💵 Efectivo: $${Number(total).toLocaleString("es-AR")}` + (data.pagaCon ? ` (paga con $${data.pagaCon.toLocaleString("es-AR")})` : "")
-      : `🏦 Transferencia: $${Number(total).toLocaleString("es-AR")}` + (comprobanteUrl ? " (con comprobante)" : " (sin comprobante)"),
-  ];
-  after(() => avisarPorWhatsapp(lineas.join("\n")));
-
   revalidatePath("/pedidos-zona-sur");
   revalidatePath("/pedidos-zona-sur/colegio");
-  void pedido;
   return { success: true };
 }
 
