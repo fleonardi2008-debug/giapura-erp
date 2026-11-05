@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cargarPedidoImpaManual } from "@/lib/actions/impa";
+import type { DiaImpa } from "@/lib/impa";
 
 type Producto = { id: string; nombre: string; precio: number; consumo: Record<string, number> };
 type StockFrasco = { id: string; nombre: string; total: number; usado: number };
@@ -22,12 +23,10 @@ function plata(n: number) {
 /** Carga a mano un pedido del IMPA (alguien que pidió por WhatsApp). Cuenta para el mismo stock que los de la página. */
 export function PedidoImpaManual({
   dias,
-  opciones,
   productos,
   stock,
 }: {
-  dias: string[];
-  opciones: string[];
+  dias: DiaImpa[];
   productos: Producto[];
   stock: StockFrasco[];
 }) {
@@ -36,8 +35,9 @@ export function PedidoImpaManual({
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [dia, setDia] = useState(dias[0] ?? "");
-  const [opcion, setOpcion] = useState(opciones[0] ?? "");
+  const [dia, setDia] = useState(dias[0]?.dia ?? "");
+  const [opcion, setOpcion] = useState(dias[0]?.opciones[0] ?? "");
+  const opcionesDelDia = dias.find((x) => x.dia === dia)?.opciones ?? [];
   const [metodoPago, setMetodoPago] = useState<"TRANSFERENCIA" | "EFECTIVO">("EFECTIVO");
   const [nota, setNota] = useState("");
 
@@ -133,10 +133,18 @@ export function PedidoImpaManual({
         </div>
         <div className="space-y-2">
           <Label htmlFor="dia">Día de retiro</Label>
-          <select id="dia" className={SELECT} value={dia} onChange={(e) => setDia(e.target.value)}>
+          <select
+            id="dia"
+            className={SELECT}
+            value={dia}
+            onChange={(e) => {
+              setDia(e.target.value);
+              setOpcion(dias.find((x) => x.dia === e.target.value)?.opciones[0] ?? "");
+            }}
+          >
             {dias.map((d) => (
-              <option key={d} value={d}>
-                {d}
+              <option key={d.dia} value={d.dia}>
+                {d.dia}
               </option>
             ))}
           </select>
@@ -144,7 +152,7 @@ export function PedidoImpaManual({
         <div className="space-y-2">
           <Label htmlFor="opcion">Momento</Label>
           <select id="opcion" className={SELECT} value={opcion} onChange={(e) => setOpcion(e.target.value)}>
-            {opciones.map((o) => (
+            {opcionesDelDia.map((o) => (
               <option key={o} value={o}>
                 {o}
               </option>

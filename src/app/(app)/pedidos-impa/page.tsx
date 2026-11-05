@@ -57,8 +57,9 @@ export default async function PedidosImpaPage({ searchParams }: { searchParams: 
     leerStockZonaSur(),
   ]);
 
-  const dias = parsearDiasImpa(config.impaDias);
-  const opciones = parsearOpcionesImpa(config.impaOpciones);
+  const dias = parsearDiasImpa(config.impaDias, parsearOpcionesImpa(config.impaOpciones));
+  const nombresDias = dias.map((x) => x.dia);
+  const todasLasOpciones = [...new Set(dias.flatMap((x) => x.opciones))];
   const grupos = new Map<string, typeof pedidos>();
   for (const pedido of pedidos) {
     const { dia, opcion } = partesRetiro(pedido.puntoElegido);
@@ -70,7 +71,7 @@ export default async function PedidosImpaPage({ searchParams }: { searchParams: 
     const [da, oa] = a.split("|");
     const [db, ob] = b.split("|");
     const rank = (lista: string[], x: string) => (lista.indexOf(x) === -1 ? 999 : lista.indexOf(x));
-    return rank(dias, da) - rank(dias, db) || rank(opciones, oa) - rank(opciones, ob);
+    return rank(nombresDias, da) - rank(nombresDias, db) || rank(todasLasOpciones, oa) - rank(todasLasOpciones, ob);
   });
 
   return (

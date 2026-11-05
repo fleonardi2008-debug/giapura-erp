@@ -33,8 +33,7 @@ export default async function ImpaPage() {
     <div className="gia-zona-sur">
       <ImpaPedidoForm
         config={{
-          dias: parsearDiasImpa(config.impaDias),
-          opciones: parsearOpcionesImpa(config.impaOpciones),
+          dias: parsearDiasImpa(config.impaDias, parsearOpcionesImpa(config.impaOpciones)),
           lugar: config.impaLugar,
           cbuAlias: config.cbuAlias,
           titularCuenta: config.titularCuenta,

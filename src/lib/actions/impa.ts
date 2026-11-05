@@ -6,7 +6,7 @@ import { put } from "@vercel/blob";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { leerStockZonaSur } from "@/lib/zona-sur-stock";
-import { parsearDiasImpa, parsearOpcionesImpa, puntoRetiroImpa } from "@/lib/impa";
+import { parsearDiasImpa, parsearOpcionesImpa, puntoRetiroImpa, serializarDiasImpa } from "@/lib/impa";
 
 async function requireOwner() {
   const session = await getSession();
@@ -41,11 +41,11 @@ type DatosPedido = {
 async function guardarPedidoImpa(d: DatosPedido): Promise<{ error: string } | { success: true; aviso?: string }> {
   const config = await prisma.zonaSurConfig.upsert({ where: { id: "singleton" }, create: { id: "singleton" }, update: {} });
 
-  const dias = parsearDiasImpa(config.impaDias);
-  const opciones = parsearOpcionesImpa(config.impaOpciones);
+  const dias = parsearDiasImpa(config.impaDias, parsearOpcionesImpa(config.impaOpciones));
   if (dias.length === 0) return { error: "Por ahora no hay días de retiro en el IMPA." };
-  if (!dias.includes(d.dia)) return { error: "Ese día ya no está disponible. Elegí otro de la lista." };
-  if (!opciones.includes(d.opcion)) return { error: "Elegí si retirás a la entrada o a la salida." };
+  const diaElegido = dias.find((x) => x.dia === d.dia);
+  if (!diaElegido) return { error: "Ese día ya no está disponible. Elegí otro de la lista." };
+  if (!diaElegido.opciones.includes(d.opcion)) return { error: "Ese momento no está disponible ese día. Elegí otro de la lista." };
 
   const skus = await prisma.sku.findMany({
     where: { id: { in: d.items.map((i) => i.skuId) }, activo: true, precioImpa: { not: null } },
@@ -258,8 +258,7 @@ export async function guardarImpaConfig(formData: FormData) {
       where: { id: "singleton" },
       create: { id: "singleton" },
       update: {
-        impaDias: parsearDiasImpa(String(formData.get("impaDias") ?? "")).join("\n"),
-        impaOpciones: parsearOpcionesImpa(String(formData.get("impaOpciones") ?? "")).join("\n"),
+        impaDias: serializarDiasImpa(parsearDiasImpa(String(formData.get("impaDias") ?? ""))),
         impaLugar: String(formData.get("impaLugar") ?? "").trim() || null,
       },
     }),

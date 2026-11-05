@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { guardarImpaConfig } from "@/lib/actions/impa";
+import { serializarDiasImpa, type DiaImpa } from "@/lib/impa";
 
 type Producto = {
   id: string;
@@ -23,11 +24,31 @@ export function ImpaConfigForm({
   config,
   productos,
 }: {
-  config: { dias: string; opciones: string; lugar: string };
+  config: { dias: DiaImpa[]; lugar: string };
   productos: Producto[];
 }) {
   const [pending, startTransition] = useTransition();
   const frascos = productos.filter((p) => !p.esPack);
+  // Cada día se edita en una fila: el nombre del día y, aparte, qué momentos hay ese día (con la hora si querés).
+  const [filas, setFilas] = useState(() =>
+    (config.dias.length > 0 ? config.dias : [{ dia: "", opciones: ["A la entrada", "A la salida"] }]).map((d) => ({
+      dia: d.dia,
+      entrada: d.opciones.find((o) => /entrada/i.test(o)) ?? "",
+      salida: d.opciones.find((o) => /salida/i.test(o)) ?? "",
+      otros: d.opciones.filter((o) => !/entrada|salida/i.test(o)),
+    }))
+  );
+  const cambiarFila = (i: number, campo: "dia" | "entrada" | "salida", valor: string) =>
+    setFilas((fs) => fs.map((f, k) => (k === i ? { ...f, [campo]: valor } : f)));
+  const diasParaGuardar = serializarDiasImpa(
+    filas
+      .filter((f) => f.dia.trim())
+      .map((f) => ({
+        dia: f.dia.trim(),
+        opciones: [f.entrada.trim(), f.salida.trim(), ...f.otros].filter(Boolean),
+      }))
+      .filter((d) => d.opciones.length > 0)
+  );
 
   function guardar(formData: FormData) {
     startTransition(async () => {
@@ -81,20 +102,54 @@ export function ImpaConfigForm({
           <CardTitle>Retiro en el IMPA</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="impaDias">Días de retiro (uno por línea)</Label>
-            <Textarea id="impaDias" name="impaDias" rows={5} defaultValue={config.dias} placeholder={"Martes 11/11\nJueves 13/11"} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="impaOpciones">Momentos de cada día (uno por línea)</Label>
-            <Textarea
-              id="impaOpciones"
-              name="impaOpciones"
-              rows={5}
-              defaultValue={config.opciones}
-              placeholder={"A la entrada\nA la salida"}
-            />
-            <p className="text-xs text-muted-foreground">Podés poner la hora: &quot;A la entrada (7:15hs)&quot;.</p>
+          <div className="space-y-3 sm:col-span-2">
+            <input type="hidden" name="impaDias" value={diasParaGuardar} />
+            <p className="text-sm text-muted-foreground">
+              Un renglón por día. Escribí el momento solo en los que hay: si dejás la salida vacía, ese día solo se puede retirar
+              a la entrada. Podés poner la hora, por ejemplo &quot;A la entrada 7:15 am&quot;.
+            </p>
+            {filas.map((f, i) => (
+              <div key={i} className="grid items-end gap-2 rounded-xl border border-border p-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                <div className="space-y-1">
+                  <Label htmlFor={`dia_${i}`} className="text-xs">
+                    Día
+                  </Label>
+                  <Input id={`dia_${i}`} value={f.dia} onChange={(e) => cambiarFila(i, "dia", e.target.value)} placeholder="Jueves 12/11" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor={`entrada_${i}`} className="text-xs">
+                    A la entrada
+                  </Label>
+                  <Input
+                    id={`entrada_${i}`}
+                    value={f.entrada}
+                    onChange={(e) => cambiarFila(i, "entrada", e.target.value)}
+                    placeholder="A la entrada 7:15 am"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor={`salida_${i}`} className="text-xs">
+                    A la salida
+                  </Label>
+                  <Input
+                    id={`salida_${i}`}
+                    value={f.salida}
+                    onChange={(e) => cambiarFila(i, "salida", e.target.value)}
+                    placeholder="A la salida 12:30 (vacío = no hay)"
+                  />
+                </div>
+                <Button type="button" variant="outline" onClick={() => setFilas((fs) => fs.filter((_, k) => k !== i))}>
+                  Quitar
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setFilas((fs) => [...fs, { dia: "", entrada: "A la entrada", salida: "A la salida", otros: [] }])}
+            >
+              Agregar día
+            </Button>
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="impaLugar">Dónde se retira</Label>

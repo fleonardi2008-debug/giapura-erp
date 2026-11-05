@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { buttonVariants } from "@/components/ui/button";
 import { ImpaConfigForm } from "@/components/zona-sur/impa-config-form";
 import { leerStockZonaSur } from "@/lib/zona-sur-stock";
+import { parsearDiasImpa, parsearOpcionesImpa } from "@/lib/impa";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export default async function ImpaConfigPage() {
         </Link>
       </div>
       <ImpaConfigForm
-        config={{ dias: config.impaDias ?? "", opciones: config.impaOpciones, lugar: config.impaLugar ?? "" }}
+        config={{ dias: parsearDiasImpa(config.impaDias, parsearOpcionesImpa(config.impaOpciones)), lugar: config.impaLugar ?? "" }}
         productos={skus.map((s) => ({
           id: s.id,
           nombre: s.nombre,

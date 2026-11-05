@@ -33,8 +33,7 @@ export default async function NuevoPedidoImpaPage() {
         </Link>
       </div>
       <PedidoImpaManual
-        dias={parsearDiasImpa(config.impaDias)}
-        opciones={parsearOpcionesImpa(config.impaOpciones)}
+        dias={parsearDiasImpa(config.impaDias, parsearOpcionesImpa(config.impaOpciones))}
         productos={skus.map((s) => ({ id: s.id, nombre: s.nombre, precio: Number(s.precioImpa), consumo: consumo[s.id] ?? {} }))}
         stock={stock}
       />

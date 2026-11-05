@@ -1,13 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { crearImpaPedido } from "@/lib/actions/impa";
 import { achicarImagen } from "@/lib/achicar-imagen";
-import { porcentajeOff } from "@/lib/impa";
+import { porcentajeOff, type DiaImpa } from "@/lib/impa";
 import { cn } from "@/lib/utils";
 import { BOTON_CANTIDAD, CAMPO, Paso, Revelar, TarjetaOpcion, moneyAR } from "./pedido-form";
 
@@ -26,37 +26,13 @@ type Sku = {
 };
 type StockFrasco = { id: string; nombre: string; total: number; usado: number };
 type Config = {
-  dias: string[];
-  opciones: string[];
+  dias: DiaImpa[];
   lugar: string | null;
   cbuAlias: string | null;
   titularCuenta: string | null;
   whatsappContacto: string;
 };
 type MetodoPago = "TRANSFERENCIA" | "EFECTIVO";
-
-/** Logo del IMPA (archivo /branding/impa-logo.png); si todavía no está subido, muestra el nombre en texto. */
-function LogoImpa() {
-  const ref = useRef<HTMLImageElement>(null);
-  const [sinLogo, setSinLogo] = useState(false);
-  useEffect(() => {
-    const img = ref.current;
-    if (img && img.complete && img.naturalWidth === 0) setSinLogo(true);
-  }, []);
-  if (sinLogo) {
-    return <p className="gia-entra text-5xl font-bold tracking-wide text-[var(--primary)] sm:text-6xl">IMPA</p>;
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      ref={ref}
-      src="/branding/impa-logo.png"
-      alt="IMPA"
-      onError={() => setSinLogo(true)}
-      className="gia-entra mx-auto h-20 w-auto sm:h-28"
-    />
-  );
-}
 
 export function ImpaPedidoForm({ config, skus, stock }: { config: Config; skus: Sku[]; stock: StockFrasco[] }) {
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
@@ -76,6 +52,7 @@ export function ImpaPedidoForm({ config, skus, stock }: { config: Config; skus: 
   }, []);
 
   const hayFrascosSueltos = skus.some((s) => !s.esPack);
+  const opcionesDelDia = config.dias.find((x) => x.dia === dia)?.opciones ?? [];
   const total = useMemo(
     () => skus.reduce((acc, s) => acc + (cantidades[s.id] ?? 0) * s.precioVenta, 0),
     [skus, cantidades]
@@ -216,12 +193,8 @@ export function ImpaPedidoForm({ config, skus, stock }: { config: Config; skus: 
   return (
     <form action={handleSubmit} className="mx-auto max-w-2xl space-y-8 px-4 pt-8 sm:px-6 sm:pt-12">
       <header className="text-center">
-        <LogoImpa />
-        <p className="gia-entra gia-mano mt-3 text-2xl text-[var(--muted-foreground)]" style={{ "--d": "100ms" } as React.CSSProperties}>
-          con
-        </p>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/branding/giapura-logo.png" alt="Giapura" className="gia-entra mx-auto h-10 w-auto sm:h-12" style={{ "--d": "150ms" } as React.CSSProperties} />
+        <img src="/branding/giapura-logo-alas.png" alt="Giapura" className="gia-entra mx-auto h-32 w-auto sm:h-40" />
         <p className="gia-entra mx-auto mt-3 max-w-md text-sm text-[var(--muted-foreground)] sm:text-base" style={{ "--d": "200ms" } as React.CSSProperties}>
           {hayFrascosSueltos ? "Elegí tus productos" : "Elegí tu pack"}, cuándo lo retirás en el IMPA y cómo pagás.
         </p>
@@ -371,22 +344,32 @@ export function ImpaPedidoForm({ config, skus, stock }: { config: Config; skus: 
               <p className="text-sm font-medium">Día</p>
               <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Día de retiro">
                 {config.dias.map((d) => (
-                  <TarjetaOpcion key={d} activo={dia === d} onClick={() => setDia(d)}>
-                    <span className="font-medium">{d}</span>
+                  <TarjetaOpcion
+                    key={d.dia}
+                    activo={dia === d.dia}
+                    onClick={() => {
+                      setDia(d.dia);
+                      // Si ese día hay un solo momento, queda elegido; si no, se vuelve a elegir.
+                      setOpcion(d.opciones.length === 1 ? d.opciones[0] : "");
+                    }}
+                  >
+                    <span className="font-medium">{d.dia}</span>
                   </TarjetaOpcion>
                 ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">¿A qué hora?</p>
-              <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Momento de retiro">
-                {config.opciones.map((o) => (
-                  <TarjetaOpcion key={o} activo={opcion === o} onClick={() => setOpcion(o)}>
-                    <span className="font-medium">{o}</span>
-                  </TarjetaOpcion>
-                ))}
+            {dia && (
+              <div className="gia-aparece space-y-2">
+                <p className="text-sm font-medium">¿A qué hora?</p>
+                <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Momento de retiro">
+                  {opcionesDelDia.map((o) => (
+                    <TarjetaOpcion key={o} activo={opcion === o} onClick={() => setOpcion(o)}>
+                      <span className="font-medium">{o}</span>
+                    </TarjetaOpcion>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
       </Revelar>
