@@ -62,6 +62,7 @@ export default async function ZonaSurPage() {
           colegioNombre: config.colegioNombre,
           ventanaTexto: config.ventanaTexto,
           whatsappContacto: config.whatsappContacto,
+          retiroCasa: config.rutaInicio,
           colegioDias: parsearDiasColegio(config.colegioDias),
           descuentoEfectivo: config.descuentoEfectivo,
           andreaniActivo: config.andreaniActivo,

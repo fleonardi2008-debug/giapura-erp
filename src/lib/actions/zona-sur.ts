@@ -362,7 +362,9 @@ export async function crearZonaSurPedido(formData: FormData) {
   if (data.metodoEntrega === "PUNTO_QUILMES" || data.metodoEntrega === "PUNTO_BERNAL" || data.metodoEntrega === "COLEGIO") {
     return { error: "Ya no hacemos retiros en puntos de encuentro ni en el colegio. Elegí otra forma de entrega." };
   }
-  let puntoElegido: string | null = null;
+  // Retiro por la casa del dueño: se coordina por WhatsApp (la dirección sale de la configuración de la ruta).
+  let puntoElegido: string | null =
+    data.metodoEntrega === "RETIRO_CASA" ? `Retiro por mi casa — ${config.rutaInicio} (a coordinar por WhatsApp)` : null;
 
   // El colegio ya no se ofrece: los pedidos nuevos nunca llevan día de colegio.
   const colegioDia: string | null = null;

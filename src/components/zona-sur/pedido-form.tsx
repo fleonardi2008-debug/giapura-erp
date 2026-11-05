@@ -45,6 +45,8 @@ type Config = {
   colegioNombre: string | null;
   ventanaTexto: string;
   whatsappContacto: string;
+  /** Dirección de la casa del dueño, para el retiro a coordinar */
+  retiroCasa: string;
   colegioDias: string[];
   andreaniActivo: boolean;
   andreaniTexto: string | null;
@@ -52,7 +54,7 @@ type Config = {
   descuentoEfectivo: number;
 };
 
-type MetodoEntrega = "ENVIO_ZONA" | "COLEGIO" | "ANDREANI";
+type MetodoEntrega = "ENVIO_ZONA" | "COLEGIO" | "ANDREANI" | "RETIRO_CASA";
 /** Resultado de ubicar la dirección del cliente en el mapa de la zona de envío. */
 type Verificacion = {
   direccion: string;
@@ -287,8 +289,11 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
             pisoDepto.trim() ? `🏢 Piso/Depto: ${pisoDepto.trim()}` : "",
             indicaciones.trim() ? `📝 Indicaciones: ${indicaciones.trim()}` : "",
             config.ventanaTexto.trim() ? `🕐 ${config.ventanaTexto.trim()}` : "",
+            "📅 Quiero coordinar el día y la hora del envío",
           ]
-        : [metodoEntrega === "ANDREANI" ? "📦 Envío por Andreani" : "📍 Entrega a coordinar"];
+        : metodoEntrega === "RETIRO_CASA"
+          ? [`🏠 Retiro por tu casa: ${config.retiroCasa}`, "📅 Quiero coordinar el día y la hora del retiro"]
+          : [metodoEntrega === "ANDREANI" ? "📦 Envío por Andreani" : "📍 Entrega a coordinar"];
     const pago =
       metodoPago === "EFECTIVO"
         ? [`💵 Pago en efectivo: ${plata(totalConEnvio)}`, `💰 Paga con: ${plata(pagaCon)}`, `🔁 Vuelto: ${plata(Math.max(0, pagaCon - totalConEnvio))}`]
@@ -401,10 +406,12 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
           Recibimos tu pedido. Te vamos a escribir por WhatsApp o mail a{" "}
           <strong>{email}</strong> para coordinar{" "}
           {metodoEntrega === "ENVIO_ZONA"
-            ? "el envío"
+            ? "el envío: el día y la hora los coordinamos por WhatsApp"
             : metodoEntrega === "ANDREANI"
               ? "el envío por Andreani: te mandamos el seguimiento"
-              : metodoEntrega === "COLEGIO"
+              : metodoEntrega === "RETIRO_CASA"
+                ? "el retiro por mi casa: el día y la hora los coordinamos por WhatsApp"
+                : metodoEntrega === "COLEGIO"
                 ? "la entrega en el colegio"
                 : "la entrega en el punto de encuentro"}
           .
@@ -626,7 +633,13 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
               {config.zonaPrecio > 0 ? <>— {moneyAR(config.zonaPrecio)}</> : <span className="gia-gratis">Gratis</span>}
             </span>
             <span className="text-sm text-[var(--muted-foreground)]">
-              Válido dentro del círculo marcado en el mapa. Verificamos tu dirección.
+              Válido dentro del círculo marcado en el mapa. Verificamos tu dirección. Al confirmar se abre WhatsApp para coordinar el día y la hora.
+            </span>
+          </TarjetaOpcion>
+          <TarjetaOpcion activo={metodoEntrega === "RETIRO_CASA"} onClick={() => setMetodoEntrega("RETIRO_CASA")}>
+            <span className="font-medium">Retiro por mi casa — sin costo</span>
+            <span className="text-sm text-[var(--muted-foreground)]">
+              {config.retiroCasa} (a coordinar). Al confirmar se abre WhatsApp para que acordemos el día y la hora.
             </span>
           </TarjetaOpcion>
           {hayColegio && (
