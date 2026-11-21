@@ -599,6 +599,9 @@ model ZonaSurConfig {
   impaDias          String? // días de retiro en el IMPA, uno por línea
   impaOpciones      String   @default("A la entrada\nA la salida") // momentos de retiro de cada día, uno por línea
   impaLugar         String? // dónde se retira en el IMPA
+  ecoRadioKm        Float    @default(5.5) // página Desafío Eco YPF: radio del envío a domicilio
+  ecoPrecioEnvio    Decimal  @default(5000) @db.Decimal(14, 2) // página Desafío Eco YPF: precio del envío a domicilio
+  ecoFechaEntrega   String   @default("Domingo 29 de noviembre") // página Desafío Eco YPF: cuándo se entrega
   whatsappContacto  String   @default("5491168843413") // WhatsApp del dueño, al que el cliente le manda su pedido (solo dígitos, con código de país)
   ventanaTexto      String   @default("Voy a estar en mi domicilio entre las 11hs y 15hs del día de la entrega") // casilla obligatoria del envío a domicilio; vacío = no se pide
   rutaRetiro        String   @default("Zeballos 575, Bernal, Quilmes") // primera parada: donde se buscan las cajas con los pedidos
@@ -627,6 +630,7 @@ model ZonaSurPedido {
   metodoEntrega  ZonaSurMetodoEntrega
   direccion      String? // solo si metodoEntrega = ENVIO_ZONA
   envioIndicaciones String? // envío a domicilio: indicaciones para encontrar la casa (timbre, portón, entre calles...)
+  canal          String   @default("ZONA_SUR") // de qué página vino el pedido: ZONA_SUR o ECOYPF
   envioLat       Float? // ubicación verificada del domicilio (para armar la ruta de reparto)
   envioLng       Float?
   andreaniLink   String? // solo si metodoEntrega = ANDREANI: link de un solo uso donde el cliente completa sus datos y paga el envío (ya opcional)

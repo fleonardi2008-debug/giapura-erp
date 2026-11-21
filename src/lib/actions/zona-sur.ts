@@ -225,6 +225,7 @@ const pedidoPublicoSchema = z.object({
   envioCalle: z.string().optional(),
   envioNumero: z.string().optional(),
   envioPiso: z.string().optional(),
+  canal: z.enum(["ZONA_SUR", "ECOYPF"]).default("ZONA_SUR"),
   envioIndicaciones: z.string().optional(),
   ventanaConfirmada: z.string().optional(),
   envioCp: z.string().optional(),
@@ -258,6 +259,7 @@ export async function crearZonaSurPedido(formData: FormData) {
     envioCalle: formData.get("envioCalle") ?? "",
     envioNumero: formData.get("envioNumero") ?? "",
     envioPiso: formData.get("envioPiso") ?? "",
+    canal: formData.get("canal") || "ZONA_SUR",
     envioIndicaciones: formData.get("envioIndicaciones") ?? "",
     ventanaConfirmada: formData.get("ventanaConfirmada") ?? "",
     envioCp: formData.get("envioCp") ?? "",
@@ -336,18 +338,27 @@ export async function crearZonaSurPedido(formData: FormData) {
     update: {},
   });
 
+  // Página Desafío Eco YPF: misma forma de pedir, pero solo envío a domicilio (radio y precio propios) o Andreani,
+  // con los precios del IMPA, sin descuento por efectivo y sin límite de stock.
+  const eco = data.canal === "ECOYPF";
+  const radioKm = eco ? config.ecoRadioKm : config.zonaRadioKm;
+  const precioEnvio = Number(eco ? config.ecoPrecioEnvio : config.zonaPrecio);
+  if (eco && data.metodoEntrega !== "ENVIO_ZONA" && data.metodoEntrega !== "ANDREANI") {
+    return { error: "Elegí envío a domicilio o envío por Andreani." };
+  }
+
   // Envío a domicilio: el navegador ubica la dirección y manda las coordenadas; acá se vuelve a comprobar
   // que caigan dentro del círculo de la zona (el mapa que ve el cliente).
   if (data.metodoEntrega === "ENVIO_ZONA") {
-    if (config.ventanaTexto.trim() && data.ventanaConfirmada !== "1") {
+    if (!eco && config.ventanaTexto.trim() && data.ventanaConfirmada !== "1") {
       return { error: "Tildá la casilla de confirmación del domicilio para poder pedir" };
     }
     if (data.lat == null || data.lng == null || !Number.isFinite(data.lat) || !Number.isFinite(data.lng)) {
       return { error: "No pudimos verificar tu dirección. Revisala y probá de nuevo." };
     }
     const km = distanciaKm({ lat: config.zonaCentroLat, lng: config.zonaCentroLng }, { lat: data.lat, lng: data.lng });
-    if (km > config.zonaRadioKm) {
-      const zona = Number(config.zonaPrecio) > 0 ? "zona de envío a domicilio" : "zona de envío gratis";
+    if (km > radioKm) {
+      const zona = precioEnvio > 0 ? "zona de envío a domicilio" : "zona de envío gratis";
       return {
         error: `Tu dirección queda fuera de la ${zona}.${config.andreaniActivo ? " Elegí envío por Andreani." : ""}`,
       };
@@ -377,10 +388,10 @@ export async function crearZonaSurPedido(formData: FormData) {
   const itemsParaCrear = [];
   for (const item of data.items) {
     const sku = skus.find((s) => s.id === item.skuId);
-    // Precio de Zona Sur si está cargado; si no, el precio online de siempre.
-    const precioBase = sku?.precioZonaSur ?? sku?.precioVenta;
-    // Los frascos sueltos solo se pueden pedir si están habilitados en la configuración.
-    if (!sku || !precioBase || (sku.nivel !== "PACK" && !config.frascosSueltos)) {
+    // Precio de Zona Sur si está cargado; si no, el precio online de siempre. Eco YPF usa los precios del IMPA.
+    const precioBase = eco ? sku?.precioImpa : (sku?.precioZonaSur ?? sku?.precioVenta);
+    // Los frascos sueltos solo se pueden pedir si están habilitados en la configuración (en Eco YPF siempre).
+    if (!sku || !precioBase || (sku.nivel !== "PACK" && !eco && !config.frascosSueltos)) {
       return { error: "Uno de los productos elegidos ya no está disponible. Recargá la página y volvé a armar tu pedido." };
     }
     const precioUnitario = Number(precioBase);
@@ -398,8 +409,8 @@ export async function crearZonaSurPedido(formData: FormData) {
     return { error: "Para envíos por Andreani solo se pueden pedir packs (las cajas son de a dos)" };
   }
 
-  // Stock de lo que reparte Fran: todo menos Andreani (sale de fábrica, sin límite).
-  if (data.metodoEntrega !== "ANDREANI") {
+  // Stock de lo que reparte Fran: todo menos Andreani (sale de fábrica, sin límite). Eco YPF no tiene límite.
+  if (data.metodoEntrega !== "ANDREANI" && !eco) {
     const { stock, consumo } = await leerStockZonaSur();
     const necesario: Record<string, number> = {};
     for (const item of data.items) {
@@ -419,9 +430,9 @@ export async function crearZonaSurPedido(formData: FormData) {
 
   const totalProductos = itemsParaCrear.reduce((acc, i) => acc + i.subtotal, 0);
   // El descuento por pagar en efectivo es sobre los productos (no sobre el envío).
-  const descuento = data.metodoPago === "EFECTIVO" ? descuentoEfectivo(totalProductos, config.descuentoEfectivo) : 0;
+  const descuento = data.metodoPago === "EFECTIVO" && !eco ? descuentoEfectivo(totalProductos, config.descuentoEfectivo) : 0;
   let total = totalProductos - descuento;
-  if (data.metodoEntrega === "ENVIO_ZONA") total += Number(config.zonaPrecio);
+  if (data.metodoEntrega === "ENVIO_ZONA") total += precioEnvio;
 
   // Envío por Andreani: se cobra junto con los productos. El precio sale de la tabla de tarifas
   // (nunca de lo que mande el navegador). Sin tarifa para ese código postal, queda "a confirmar".
@@ -464,6 +475,7 @@ export async function crearZonaSurPedido(formData: FormData) {
       clienteEmail: data.clienteEmail,
       clienteTelefono: data.clienteTelefono,
       metodoEntrega: data.metodoEntrega,
+      canal: data.canal,
       direccion: data.metodoEntrega === "ENVIO_ZONA" ? data.direccion : (datosAndreani?.direccion ?? null),
       ...(data.metodoEntrega === "ENVIO_ZONA" && data.lat != null && data.lng != null
         ? {

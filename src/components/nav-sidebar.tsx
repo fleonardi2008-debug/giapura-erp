@@ -20,6 +20,7 @@ const linksDueno = [
   { href: "/pedidos", label: "Pedidos" },
   { href: "/pedidos-zona-sur", label: "Pedidos Zona Sur" },
   { href: "/pedidos-impa", label: "Pedidos IMPA" },
+  { href: "/pedidos-ecoypf", label: "Pedidos Eco YPF" },
   { href: "/etiquetas", label: "Etiquetas Zona Sur" },
   { href: "/gastos", label: "Gastos" },
   { href: "/resultados", label: "Estado de resultados" },

@@ -11,6 +11,7 @@ import { estimarEnvioAndreaniCercano, numeroDeCodigoPostal, type TarifaAndreani 
 import { descuentoEfectivo as descuentoEnEfectivo, precioEnEfectivo } from "@/lib/zona-sur-precios";
 import { distanciaKm, ubicarDireccion, type Punto } from "@/lib/zona-sur-geo";
 import { achicarImagen } from "@/lib/achicar-imagen";
+import { porcentajeOff } from "@/lib/impa";
 import { cn } from "@/lib/utils";
 
 const MapaZona = dynamic(() => import("./mapa-zona").then((m) => m.MapaZona), {
@@ -32,6 +33,8 @@ type Sku = {
   consumo: Record<string, number>;
   /** Lo que se ahorra comprando este pack en vez de los frascos sueltos (null si no hay ahorro) */
   ahorro: { monto: number; pct: number } | null;
+  /** Precio de lista que se muestra tachado (página Eco YPF) */
+  precioTachado?: number | null;
 };
 type StockFrasco = { id: string; nombre: string; total: number; usado: number };
 type Config = {
@@ -159,7 +162,18 @@ export function Revelar({ className, children }: { className?: string; children:
   );
 }
 
-export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; skus: Sku[]; stock: StockFrasco[] }) {
+export function ZonaSurPedidoForm({
+  config,
+  skus,
+  stock,
+  eco,
+}: {
+  config: Config;
+  skus: Sku[];
+  stock: StockFrasco[];
+  /** Página Desafío Eco YPF: logo propio, precios del IMPA, entrega en una fecha fija y sin límite de stock */
+  eco?: { fechaEntrega: string };
+}) {
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [metodoEntrega, setMetodoEntrega] = useState<MetodoEntrega>("ENVIO_ZONA");
   const [direccion, setDireccion] = useState("");
@@ -289,7 +303,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
             pisoDepto.trim() ? `🏢 Piso/Depto: ${pisoDepto.trim()}` : "",
             indicaciones.trim() ? `📝 Indicaciones: ${indicaciones.trim()}` : "",
             config.ventanaTexto.trim() ? `🕐 ${config.ventanaTexto.trim()}` : "",
-            "📅 Quiero coordinar el día y la hora del envío",
+            eco ? `📅 Entrega: ${eco.fechaEntrega}` : "📅 Quiero coordinar el día y la hora del envío",
           ]
         : metodoEntrega === "RETIRO_CASA"
           ? [`🏠 Retiro por tu casa: ${config.retiroCasa}`, "📅 Quiero coordinar el día y la hora del retiro"]
@@ -299,7 +313,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
         ? [`💵 Pago en efectivo: ${plata(totalConEnvio)}`, `💰 Paga con: ${plata(pagaCon)}`, `🔁 Vuelto: ${plata(Math.max(0, pagaCon - totalConEnvio))}`]
         : [`🏦 Pago por transferencia: ${plata(totalConEnvio)}`];
     return [
-      `👋 Hola Fran! Soy ${nombre.trim()}, hice un pedido:`,
+      `👋 Hola Fran! Soy ${nombre.trim()}, hice un pedido${eco ? " para el Desafío Eco YPF" : ""}:`,
       "",
       ...skus.filter((s) => (cantidades[s.id] ?? 0) > 0).map((s) => `🥜 ${cantidades[s.id]} × ${s.nombre}`),
       "",
@@ -338,6 +352,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
       .map((s) => ({ skuId: s.id, cantidad: cantidades[s.id] }));
     formData.set("items", JSON.stringify(items));
     formData.set("metodoEntrega", metodoEntrega);
+    if (eco) formData.set("canal", "ECOYPF");
     formData.set("metodoPago", metodoPago);
     if (metodoEntrega === "ENVIO_ZONA") {
       if (config.ventanaTexto.trim() && !confirmaVentana) {
@@ -406,7 +421,9 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
           Recibimos tu pedido. Te vamos a escribir por WhatsApp o mail a{" "}
           <strong>{email}</strong> para coordinar{" "}
           {metodoEntrega === "ENVIO_ZONA"
-            ? "el envío: el día y la hora los coordinamos por WhatsApp"
+            ? eco
+              ? `el envío: te lo llevamos el ${eco.fechaEntrega}`
+              : "el envío: el día y la hora los coordinamos por WhatsApp"
             : metodoEntrega === "ANDREANI"
               ? "el envío por Andreani: te mandamos el seguimiento"
               : metodoEntrega === "RETIRO_CASA"
@@ -447,17 +464,32 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
   return (
     <form action={handleSubmit} className="mx-auto max-w-2xl space-y-8 px-4 pt-8 sm:px-6 sm:pt-12">
       <header className="text-center">
-        <img
-          src="/branding/giapura-logo.png"
-          alt="Giapura"
-          className="gia-entra mx-auto h-12 w-auto sm:h-16"
-        />
-        <p
-          className="gia-entra gia-mano mt-1 text-2xl text-[var(--muted-foreground)]"
-          style={{ "--d": "100ms" } as React.CSSProperties}
-        >
-          Pedidos Zona Sur
-        </p>
+        {eco ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/branding/ecoypf-logo.png" alt="Desafío Eco YPF" className="gia-entra mx-auto h-40 w-auto sm:h-52" />
+            <p className="gia-entra gia-mano mt-1 text-2xl text-[var(--muted-foreground)]" style={{ "--d": "100ms" } as React.CSSProperties}>
+              con
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/branding/giapura-logo-marron.png"
+              alt="Giapura"
+              className="gia-entra mx-auto h-10 w-auto sm:h-12"
+              style={{ "--d": "150ms" } as React.CSSProperties}
+            />
+          </>
+        ) : (
+          <>
+            <img src="/branding/giapura-logo.png" alt="Giapura" className="gia-entra mx-auto h-12 w-auto sm:h-16" />
+            <p
+              className="gia-entra gia-mano mt-1 text-2xl text-[var(--muted-foreground)]"
+              style={{ "--d": "100ms" } as React.CSSProperties}
+            >
+              Pedidos Zona Sur
+            </p>
+          </>
+        )}
         <p
           className="gia-entra mx-auto mt-2 max-w-md text-sm text-[var(--muted-foreground)] sm:text-base"
           style={{ "--d": "200ms" } as React.CSSProperties}
@@ -526,6 +558,7 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
           {skus.map((sku, idx) => {
             const cantidad = cantidades[sku.id] ?? 0;
             const primerSuelto = !sku.esPack && (idx === 0 || skus[idx - 1].esPack);
+            const off = porcentajeOff(sku.precioTachado, sku.precioVenta);
             return (
               <Fragment key={sku.id}>
                 {primerSuelto && (
@@ -567,6 +600,11 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                       <span className="block text-[10px] font-semibold">ahorrás {moneyAR(sku.ahorro.monto)}</span>
                     </span>
                   )}
+                  {!sku.ahorro && off && (
+                    <span className="absolute top-2 left-2 rounded-xl bg-[var(--accent)] px-2 py-1 text-sm leading-tight font-bold text-[var(--accent-foreground)] shadow-md">
+                      {off}% OFF
+                    </span>
+                  )}
                   {cantidad > 0 && (
                     <span
                       key={cantidad}
@@ -578,6 +616,9 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
                 </div>
                 <h3 className="gia-pack-nombre text-base leading-tight sm:text-xl">{sku.nombre}</h3>
                 <div>
+                  {sku.precioTachado && sku.precioTachado > sku.precioVenta && (
+                    <p className="text-sm text-[var(--muted-foreground)] line-through">{moneyAR(sku.precioTachado)}</p>
+                  )}
                   <p className="text-lg font-semibold sm:text-xl">{moneyAR(sku.precioVenta)}</p>
                   {hayDescuentoEfectivo && (
                     <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">
@@ -633,15 +674,18 @@ export function ZonaSurPedidoForm({ config, skus, stock }: { config: Config; sku
               {config.zonaPrecio > 0 ? <>— {moneyAR(config.zonaPrecio)}</> : <span className="gia-gratis">Gratis</span>}
             </span>
             <span className="text-sm text-[var(--muted-foreground)]">
-              Válido dentro del círculo marcado en el mapa. Verificamos tu dirección. Al confirmar se abre WhatsApp para coordinar el día y la hora.
+              Válido dentro del círculo marcado en el mapa. Verificamos tu dirección.{" "}
+              {eco ? <>Te lo llevamos el <strong>{eco.fechaEntrega}</strong>.</> : "Al confirmar se abre WhatsApp para coordinar el día y la hora."}
             </span>
           </TarjetaOpcion>
+          {!eco && (
           <TarjetaOpcion activo={metodoEntrega === "RETIRO_CASA"} onClick={() => setMetodoEntrega("RETIRO_CASA")}>
             <span className="font-medium">Retiro por mi casa — sin costo</span>
             <span className="text-sm text-[var(--muted-foreground)]">
               {config.retiroCasa} (a coordinar). Al confirmar se abre WhatsApp para que acordemos el día y la hora.
             </span>
           </TarjetaOpcion>
+          )}
           {hayColegio && (
             <TarjetaOpcion activo={metodoEntrega === "COLEGIO"} onClick={() => setMetodoEntrega("COLEGIO")}>
               <span className="font-medium">Retiro en el colegio</span>

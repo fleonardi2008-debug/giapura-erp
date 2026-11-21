@@ -37,6 +37,6 @@ export const config = {
   // branding son archivos estáticos (logo, etc.) que esa misma página pública necesita
   // poder cargar sin sesión.
   matcher: [
-    "/((?!api/auth|api/webhooks|api/cron|api/public|zona-sur|impa|branding|login|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api/auth|api/webhooks|api/cron|api/public|zona-sur|impa|ecoypf|branding|login|_next/static|_next/image|favicon.ico).*)",
   ],
 };

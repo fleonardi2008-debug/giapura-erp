@@ -25,7 +25,7 @@ export async function leerStockZonaSur(): Promise<{ stock: StockFrasco[]; consum
       _sum: { cantidad: true },
       where: {
         skuId: { not: null },
-        pedido: { estado: { not: "CANCELADO" }, metodoEntrega: { not: "ANDREANI" } },
+        pedido: { estado: { not: "CANCELADO" }, metodoEntrega: { not: "ANDREANI" }, canal: { not: "ECOYPF" } },
       },
     }),
   ]);
