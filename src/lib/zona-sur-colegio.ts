@@ -28,5 +28,5 @@ export function telefonoParaWhatsapp(telefono: string): string {
 }
 
 export function whatsappUrl(telefono: string, mensaje: string): string {
-  return `https://wa.me/${telefonoParaWhatsapp(telefono)}?text=${encodeURIComponent(mensaje)}`;
+  return `https://api.whatsapp.com/send?phone=${telefonoParaWhatsapp(telefono)}&text=${encodeURIComponent(mensaje)}`;
 }

@@ -215,7 +215,7 @@ export function ZonaSurPedidoForm({
   // El descuento por pagar en efectivo es sobre los productos (no sobre el envío).
   const descuento = metodoPago === "EFECTIVO" ? descuentoEnEfectivo(subtotal, config.descuentoEfectivo) : 0;
   const totalConEnvio =
-    subtotal - descuento + (metodoEntrega === "ENVIO_ZONA" ? config.zonaPrecio : 0) + (envioAndreani?.precio ?? 0);
+    subtotal - descuento + (metodoEntrega === "ENVIO_ZONA" && subtotal > 0 ? config.zonaPrecio : 0) + (envioAndreani?.precio ?? 0);
   const hayDescuentoEfectivo = config.descuentoEfectivo > 0;
   const hayProductos = Object.values(cantidades).some((c) => c > 0);
   const unidadesTotales = Object.values(cantidades).reduce((a, c) => a + c, 0);
@@ -399,7 +399,7 @@ export function ZonaSurPedidoForm({
         // navegadores bloquean las ventanas nuevas que se abren después de esperar al servidor; la pantalla de
         // "¡Listo!" queda con el botón por si el cliente vuelve atrás.)
         const numero = config.whatsappContacto.replace(/\D/g, "");
-        if (numero) window.location.href = `https://wa.me/${numero}?text=${encodeURIComponent(armarMensajePedido())}`;
+        if (numero) window.location.href = `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(armarMensajePedido())}`;
       } catch {
         // Un fallo del servidor no tiene que dejar al cliente frente a una pantalla de error en blanco.
         toast.error("No pudimos enviar tu pedido. Revisá tu conexión y probá de nuevo; si sigue, escribinos por WhatsApp.");
@@ -435,7 +435,7 @@ export function ZonaSurPedidoForm({
         </p>
         {numeroFran && (
           <a
-            href={`https://wa.me/${numeroFran}?text=${encodeURIComponent(mensajePedido)}`}
+            href={`https://api.whatsapp.com/send?phone=${numeroFran}&text=${encodeURIComponent(mensajePedido)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#25d366] px-6 text-base font-semibold text-white shadow-sm"

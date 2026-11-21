@@ -141,7 +141,7 @@ export function ImpaPedidoForm({ config, skus, stock }: { config: Config; skus: 
         // El pedido ya está guardado: se abre WhatsApp con el mensaje listo (misma pestaña: las ventanas nuevas
         // abiertas después de esperar al servidor las bloquean los navegadores).
         const numero = config.whatsappContacto.replace(/\D/g, "");
-        if (numero) window.location.href = `https://wa.me/${numero}?text=${encodeURIComponent(armarMensajePedido())}`;
+        if (numero) window.location.href = `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(armarMensajePedido())}`;
       } catch {
         toast.error("No pudimos enviar tu pedido. Revisá tu conexión y probá de nuevo.");
       }
@@ -173,7 +173,7 @@ export function ImpaPedidoForm({ config, skus, stock }: { config: Config; skus: 
         </p>
         {numeroFran && (
           <a
-            href={`https://wa.me/${numeroFran}?text=${encodeURIComponent(armarMensajePedido())}`}
+            href={`https://api.whatsapp.com/send?phone=${numeroFran}&text=${encodeURIComponent(armarMensajePedido())}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#25d366] px-6 text-base font-semibold text-white shadow-sm"
